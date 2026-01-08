@@ -1,0 +1,16 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/tailor_tally.db:/app/tailor_tally.db
+    environment:
+      - SQLALCHEMY_DATABASE_URL=sqlite:///./tailor_tally.db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend

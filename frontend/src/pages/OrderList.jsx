@@ -10,6 +10,21 @@ export default function OrderList() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("newest");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [schoolFilter, setSchoolFilter] = useState("All");
+  const [schools, setSchools] = useState([]);
+
+  useEffect(() => {
+    fetchSchools();
+  }, []);
+
+  async function fetchSchools() {
+    try {
+      const data = await fetchAPI('/schools/');
+      setSchools(data);
+    } catch (e) {
+      console.error("Failed to load schools");
+    }
+  }
 
   useEffect(() => {
     // Debounce search slightly to avoid too many requests
@@ -17,7 +32,7 @@ export default function OrderList() {
       fetchOrders();
     }, 300);
     return () => clearTimeout(timer);
-  }, [search, sortBy, statusFilter]);
+  }, [search, sortBy, statusFilter, schoolFilter]);
 
   async function fetchOrders() {
     try {
@@ -27,6 +42,7 @@ export default function OrderList() {
       if (search) params.append("search", search);
       if (sortBy) params.append("sort_by", sortBy);
       if (statusFilter && statusFilter !== "All") params.append("status", statusFilter);
+      if (schoolFilter && schoolFilter !== "All") params.append("school_id", schoolFilter);
 
       const queryString = params.toString() ? `?${params.toString()}` : "";
       const data = await fetchAPI(`/orders${queryString}`);
@@ -45,45 +61,80 @@ export default function OrderList() {
         <Link to="/create-order" className="btn">New Order</Link>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow mb-6 flex flex-wrap gap-4 items-end">
+      <div className="controls-container">
         {/* Search */}
-        <div className="flex-1 min-w-[200px]">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Search</label>
-          <input 
-            type="text" 
-            placeholder="Search Order ID or Tailor Name..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full border p-2 rounded"
-          />
+        <div className="control-group">
+          <label className="control-label">Search Orders</label>
+          <div className="input-wrapper">
+             <svg className="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+             </svg>
+            <input 
+              type="text" 
+              placeholder="Search by Order # or Tailor..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="styled-input"
+            />
+          </div>
         </div>
 
         {/* Status Filter */}
-        <div className="w-[200px]">
-           <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-           <select 
-             value={statusFilter}
-             onChange={(e) => setStatusFilter(e.target.value)}
-             className="w-full border p-2 rounded"
-           >
-             <option value="All">All Statuses</option>
-             <option value="Pending">Pending</option>
-             <option value="In Progress">In Progress</option>
-             <option value="Completed">Completed</option>
-           </select>
+        <div className="control-group small">
+           <label className="control-label">Status</label>
+           <div className="input-wrapper">
+             <select 
+               value={statusFilter}
+               onChange={(e) => setStatusFilter(e.target.value)}
+               className="styled-select"
+             >
+               <option value="All">All Statuses</option>
+               <option value="Pending">Pending</option>
+               <option value="In Progress">In Progress</option>
+               <option value="Completed">Completed</option>
+             </select>
+             <svg className="select-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+             </svg>
+           </div>
+        </div>
+
+        {/* School Filter */}
+        <div className="control-group small">
+           <label className="control-label">School</label>
+           <div className="input-wrapper">
+             <select 
+               value={schoolFilter}
+               onChange={(e) => setSchoolFilter(e.target.value)}
+               className="styled-select"
+             >
+               <option value="All">All Schools</option>
+               {schools.map(school => (
+                   <option key={school.id} value={school.id}>{school.name}</option>
+               ))}
+             </select>
+             <svg className="select-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+             </svg>
+           </div>
         </div>
 
         {/* Sort */}
-        <div className="w-[200px]">
-           <label className="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
-           <select 
-             value={sortBy}
-             onChange={(e) => setSortBy(e.target.value)}
-             className="w-full border p-2 rounded"
-           >
-             <option value="newest">Newest First</option>
-             <option value="oldest">Oldest First</option>
-           </select>
+        <div className="control-group small">
+           <label className="control-label">Sort By</label>
+           <div className="input-wrapper">
+             <select 
+               value={sortBy}
+               onChange={(e) => setSortBy(e.target.value)}
+               className="styled-select"
+             >
+               <option value="newest">Newest First</option>
+               <option value="oldest">Oldest First</option>
+             </select>
+             <svg className="select-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+               <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+             </svg>
+           </div>
         </div>
       </div>
       
@@ -95,6 +146,7 @@ export default function OrderList() {
             <tr>
               <th>Order ID</th>
               <th>Tailor</th>
+              <th>School</th>
               <th>Date</th>
               <th>Status</th>
               <th>Actions</th>
@@ -105,6 +157,12 @@ export default function OrderList() {
               <tr key={order.id}>
                 <td>#{order.id}</td>
                 <td>{order.tailor_name}</td>
+                <td>
+                    {(() => {
+                        const schoolNames = [...new Set(order.order_lines.map(line => line.school_name).filter(Boolean))];
+                        return schoolNames.length > 0 ? schoolNames.join(", ") : '-';
+                    })()}
+                </td>
                 <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 <td>
                   <span className={`px-2 py-1 rounded text-sm ${
@@ -122,7 +180,7 @@ export default function OrderList() {
             ))}
             {orders.length === 0 && (
               <tr>
-                <td colSpan="5" style={{textAlign: 'center', padding: '2rem'}}>
+                <td colSpan="6" style={{textAlign: 'center', padding: '2rem'}}>
                   No orders found
                 </td>
               </tr>

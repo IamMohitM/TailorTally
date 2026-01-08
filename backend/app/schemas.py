@@ -64,6 +64,20 @@ class Tailor(TailorBase):
     class Config:
         from_attributes = True
 
+# --- School Schemas ---
+
+class SchoolBase(BaseModel):
+    name: str
+
+class SchoolCreate(SchoolBase):
+    pass
+
+class School(SchoolBase):
+    id: int
+
+    class Config:
+        from_attributes = True
+
 # --- Delivery Schemas ---
 
 class DeliveryCreate(BaseModel):
@@ -83,6 +97,7 @@ class Delivery(BaseModel):
 class OrderLineBase(BaseModel):
     product_id: int
     size_id: int
+    school_id: Optional[int] = None
     fabric_width_inches: Optional[int] = None
     quantity: int
 
@@ -94,6 +109,7 @@ class OrderLine(OrderLineBase):
     order_id: int
     product_name: str
     size_label: str
+    school_name: Optional[str] = None
     material_req_per_unit: float
     unit: str
     total_material_req: float
@@ -106,6 +122,7 @@ class OrderLine(OrderLineBase):
 
 class OrderCreate(BaseModel):
     tailor_id: int
+    # school_id: Optional[int] = None # REMOVED
     order_lines: List[OrderLineCreate]
     created_at: Optional[datetime] = None
     notes: Optional[str] = None
@@ -114,9 +131,12 @@ class Order(BaseModel):
     id: int
     tailor_id: int
     tailor_name: str
+    # school_id: Optional[int] = None # REMOVED
+    # school_name: Optional[str] = None # REMOVED
     status: str
     created_at: datetime
     notes: Optional[str] = None
+    order_lines: List[OrderLine] = []
     order_lines: List[OrderLine] = []
 
     class Config:

@@ -91,7 +91,30 @@ def db_seed():
                     # 60 inch width (less fabric)
                     db.add(models.MaterialRule(size_id=s.id, fabric_width_inches=60, length_required=1.0 + (s_idx * 0.05), unit="meters"))
     
-    db.commit()
+    # 3. Schools
+    # Check if schools exist, if not seed them
+    if not db.query(models.School).first():
+        schools_list = [
+            "Achiever School", "Advitha International School", "Alphores", "Apoorva Florets School", 
+            "Arvind Tree School", "Bhagwati School", "Blue Bell Olympiad", "Bue Bell Foundation", 
+            "English Union", "Fundus School", "Iqra Gems International School", "Ivy International School", 
+            "Johnson Global School", "Kakatiya School", "Laural School", "Legend School", "Loyola School", 
+            "Manideep School", "Nandini School", "Nature School", "Nawab School", "New Cambridge School", 
+            "NS Model School", "Odyssey School", "Oxford School", "Paradise School", "Paramita High School", 
+            "Presidency School", "Sadhana School", "Sapthagiri School", "Saraswati Shishumandir", 
+            "Scholar School", "Siddhartha Choppadandi", "Siddhartha School KNR", "Siddhartha V. Swamy", 
+            "SRR College", "SRR School", "St. Anthony School", "St. George School", "St. Johns School", 
+            "St. Pauls School", "Suffah School", "Suvidya School", "Tetra Model School", "The Play School", 
+            "United School", "Vaninikethan School", "Vasanth Valley School", "Vishwashanti School", 
+            "Vision School", "Vivekanda Residential School", "Vivekanda Vidyaniketan School", "Vowels School", 
+            "Siddhartha Choppadandi P.Primary", "Siddhartha KNR Butterfly"
+        ]
+        print(f"Seeding {len(schools_list)} schools...")
+        for school_name in schools_list:
+             if not db.query(models.School).filter(models.School.name == school_name).first():
+                 db.add(models.School(name=school_name))
+        db.commit()
+
     db.close()
     print("Seed data initialized.")
 

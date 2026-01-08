@@ -14,3 +14,11 @@ services:
       - "80:80"
     depends_on:
       - backend
+
+  db-viewer:
+    image: python:3.11-slim
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./backend:/data
+    command: sh -c "pip install sqlite-web && sqlite_web -H 0.0.0.0 -p 8080 -x /data/tailor_tally.db"

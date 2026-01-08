@@ -15,6 +15,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     # Create Order
     db_order = models.Order(
         tailor_id=order.tailor_id, 
+        # school_id=order.school_id, # REMOVED 
         notes=order.notes,
         created_at=order.created_at or datetime.utcnow()
     )
@@ -44,6 +45,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             order_id=db_order.id,
             product_id=line.product_id,
             size_id=line.size_id,
+            school_id=line.school_id, # ADDED
             fabric_width_inches=line.fabric_width_inches,
             material_req_per_unit=material_req,
             unit=rule.unit,
@@ -61,6 +63,7 @@ def list_orders(
     search: str = None,
     sort_by: str = "newest",
     status: str = None,
+    school_id: int = None,
     db: Session = Depends(get_db)
 ):
     query = db.query(models.Order)
@@ -75,12 +78,18 @@ def list_orders(
              # Join with Tailor table to filter by name
              query = query.join(models.Tailor).filter(models.Tailor.name.ilike(f"%{search}%"))
 
-    # 2. Filter by Status
+    # 3. Filter by School (Check if any line has this school)
+    if school_id:
+        # Join Order -> OrderLine -> School (if needed, or just check OrderLine.school_id)
+        # We want orders where at least one line matches the school_id
+        query = query.join(models.OrderLine).filter(models.OrderLine.school_id == school_id)
+
+    # 4. Filter by Status
     if status and status.lower() != "all":
         # Case-insensitive match for robustness, though usually exact enum/string is used
         query = query.filter(models.Order.status == status)
 
-    # 3. Sort
+    # 5. Sort
     if sort_by == "oldest":
         query = query.order_by(models.Order.created_at.asc())
     else:
@@ -165,6 +174,8 @@ def map_order_response(order: models.Order) -> schemas.Order:
             size_id=line.size_id,
             product_name=line.product.name if line.product else f"Product #{line.product_id}",
             size_label=line.size.label if line.size else f"Size #{line.size_id}",
+            school_id=line.school_id,
+            school_name=line.school.name if line.school else None,
             fabric_width_inches=line.fabric_width_inches,
             quantity=line.quantity,
             material_req_per_unit=line.material_req_per_unit,
@@ -179,6 +190,8 @@ def map_order_response(order: models.Order) -> schemas.Order:
         id=order.id,
         tailor_id=order.tailor_id,
         tailor_name=order.tailor.name,
+        # school_id=order.school_id, # REMOVED
+        # school_name=order.school.name if order.school else None, # REMOVED
         status=order.status,
         created_at=order.created_at,
         notes=order.notes,

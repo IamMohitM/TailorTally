@@ -5,7 +5,7 @@ export default function Navbar() {
   return (
     <nav style={{ background: '#333', color: '#fff', padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
       <div style={{ fontWeight: 'bold', fontSize: '1.2rem', marginRight: 'auto' }}>
-        Tailor Tally
+        <Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>Tailor Tally</Link>
       </div>
       <Link to="/" style={{ color: '#fff', textDecoration: 'none' }}>Orders</Link>
       <Link to="/create-order" style={{ color: '#fff', textDecoration: 'none' }}>New Order</Link>

@@ -49,17 +49,28 @@ class Tailor(Base):
     is_active = Column(Boolean, default=True)
 
     orders = relationship("Order", back_populates="tailor")
+    
+class School(Base):
+    __tablename__ = "schools"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, index=True)
+    
+    # orders = relationship("Order", back_populates="school") # REMOVED
+    order_lines = relationship("OrderLine", back_populates="school")
 
 class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
     tailor_id = Column(Integer, ForeignKey("tailors.id"))
+    # school_id = Column(Integer, ForeignKey("schools.id"), nullable=True) # REMOVED
     status = Column(String, default="Pending") # Pending, In Progress, Completed
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(String, nullable=True)
 
     tailor = relationship("Tailor", back_populates="orders")
+    # school = relationship("School", back_populates="orders") # REMOVED
     order_lines = relationship("OrderLine", back_populates="order", cascade="all, delete-orphan")
 
 class OrderLine(Base):
@@ -69,6 +80,7 @@ class OrderLine(Base):
     order_id = Column(Integer, ForeignKey("orders.id"))
     product_id = Column(Integer, ForeignKey("products.id"))
     size_id = Column(Integer, ForeignKey("sizes.id"))
+    school_id = Column(Integer, ForeignKey("schools.id"), nullable=True) # MOVED HERE
     
     # Snapshot of the rule used at time of ordering
     fabric_width_inches = Column(Integer, nullable=True)
@@ -81,6 +93,7 @@ class OrderLine(Base):
     order = relationship("Order", back_populates="order_lines")
     product = relationship("Product")
     size = relationship("Size")
+    school = relationship("School", back_populates="order_lines")
     deliveries = relationship("Delivery", back_populates="order_line", cascade="all, delete-orphan")
 
 class Delivery(Base):

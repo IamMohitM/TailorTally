@@ -107,6 +107,7 @@ class OrderLine(OrderLineBase):
 class OrderCreate(BaseModel):
     tailor_id: int
     order_lines: List[OrderLineCreate]
+    created_at: Optional[datetime] = None
     notes: Optional[str] = None
 
 class Order(BaseModel):

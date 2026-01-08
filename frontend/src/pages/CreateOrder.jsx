@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../api';
+import Combobox from '../components/Combobox';
 
 export default function CreateOrder() {
   const navigate = useNavigate();
@@ -8,6 +9,7 @@ export default function CreateOrder() {
   const [products, setProducts] = useState([]);
   
   const [selectedTailor, setSelectedTailor] = useState("");
+  const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState([]);
 
@@ -23,11 +25,25 @@ export default function CreateOrder() {
       ]);
       setTailors(tData);
       setProducts(pData);
-      if (tData.length > 0) setSelectedTailor(tData[0].id);
+      // Removed auto-select to encourage explicit selection, or keep simpler logic
+      // if (tData.length > 0) setSelectedTailor(tData[0].id);
     } catch (e) {
       console.error(e);
     }
   }
+
+  const handleCreateTailor = async (name) => {
+      try {
+          const newTailor = await fetchAPI('/master-data/tailors', {
+              method: 'POST',
+              body: JSON.stringify({ name })
+          });
+          setTailors([...tailors, newTailor]);
+          setSelectedTailor(newTailor.id);
+      } catch (e) {
+          alert("Failed to create tailor: " + e.message);
+      }
+  };
 
   function addLine() {
       setLines([...lines, { 
@@ -86,6 +102,7 @@ export default function CreateOrder() {
 
       const payload = {
           tailor_id: selectedTailor,
+          created_at: new Date(orderDate).toISOString(),
           notes,
           order_lines: lines.map(l => ({
               product_id: l.productId,
@@ -114,9 +131,25 @@ export default function CreateOrder() {
       <div className="card">
           <div className="form-group">
             <label>Select Tailor</label>
-            <select className="input" value={selectedTailor} onChange={e => setSelectedTailor(e.target.value)}>
-                {tailors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            <div style={{ maxWidth: '400px' }}>
+                <Combobox 
+                    options={tailors}
+                    value={selectedTailor}
+                    onChange={setSelectedTailor}
+                    onCreate={handleCreateTailor}
+                    placeholder="Search or create tailor..."
+                />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Date</label>
+            <input 
+                type="date" 
+                className="input" 
+                style={{ maxWidth: '200px' }}
+                value={orderDate} 
+                onChange={e => setOrderDate(e.target.value)} 
+            />
           </div>
           <div className="form-group">
               <label>Notes</label>

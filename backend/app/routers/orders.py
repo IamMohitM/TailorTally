@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import models, schemas
 from ..database import get_db
+from datetime import datetime
 
 router = APIRouter(
     prefix="/orders",
@@ -12,7 +13,11 @@ router = APIRouter(
 @router.post("/", response_model=schemas.Order)
 def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     # Create Order
-    db_order = models.Order(tailor_id=order.tailor_id, notes=order.notes)
+    db_order = models.Order(
+        tailor_id=order.tailor_id, 
+        notes=order.notes,
+        created_at=order.created_at or datetime.utcnow()
+    )
     db.add(db_order)
     db.commit()
     db.refresh(db_order)
@@ -52,8 +57,37 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     return map_order_response(db_order)
 
 @router.get("/", response_model=List[schemas.Order])
-def list_orders(db: Session = Depends(get_db)):
-    orders = db.query(models.Order).order_by(models.Order.created_at.desc()).all()
+def list_orders(
+    search: str = None,
+    sort_by: str = "newest",
+    status: str = None,
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.Order)
+    
+    # 1. Search (Order ID or Tailor Name)
+    if search:
+        # Check if search is numeric (for Order ID)
+        if search.isdigit():
+             query = query.filter(models.Order.id == int(search))
+        else:
+             # Search by tailor name
+             # Join with Tailor table to filter by name
+             query = query.join(models.Tailor).filter(models.Tailor.name.ilike(f"%{search}%"))
+
+    # 2. Filter by Status
+    if status and status.lower() != "all":
+        # Case-insensitive match for robustness, though usually exact enum/string is used
+        query = query.filter(models.Order.status == status)
+
+    # 3. Sort
+    if sort_by == "oldest":
+        query = query.order_by(models.Order.created_at.asc())
+    else:
+        # Default to newest
+        query = query.order_by(models.Order.created_at.desc())
+
+    orders = query.all()
     return [map_order_response(o) for o in orders]
 
 @router.get("/{order_id}", response_model=schemas.Order)

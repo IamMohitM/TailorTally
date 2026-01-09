@@ -10,6 +10,8 @@ export default function CreateOrder() {
   const [products, setProducts] = useState([]);
   
   const [selectedTailor, setSelectedTailor] = useState("");
+  const [tailorEmail, setTailorEmail] = useState(""); // State for email
+  const [sendEmail, setSendEmail] = useState(true); // State for checkbox
   const [selectedSchool, setSelectedSchool] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
@@ -19,6 +21,16 @@ export default function CreateOrder() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Sync email when tailor selected
+  useEffect(() => {
+    if (selectedTailor) {
+        const t = tailors.find(t => t.id == selectedTailor);
+        setTailorEmail(t?.email || "");
+    } else {
+        setTailorEmail("");
+    }
+  }, [selectedTailor, tailors]);
 
   async function loadData() {
     try {
@@ -37,13 +49,18 @@ export default function CreateOrder() {
   }
 
   const handleCreateTailor = async (name) => {
+      const email = window.prompt(`Enter email for ${name} (optional):`);
       try {
+          const body = { name };
+          if (email) body.email = email;
+
           const newTailor = await fetchAPI('/master-data/tailors', {
               method: 'POST',
-              body: JSON.stringify({ name })
+              body: JSON.stringify(body)
           });
           setTailors([...tailors, newTailor]);
           setSelectedTailor(newTailor.id);
+          // Email sync effect will handle setting email state, but we can optimise
       } catch (e) {
           alert("Failed to create tailor: " + e.message);
       }
@@ -96,6 +113,23 @@ export default function CreateOrder() {
   const handleSubmit = async () => {
       if (!selectedTailor) return alert("Select a tailor");
 
+      // Check if email updated
+      const currentTailor = tailors.find(t => t.id == selectedTailor);
+      if (currentTailor && currentTailor.email !== tailorEmail) {
+          try {
+             // Update tailor first
+             const updated = await fetchAPI(`/master-data/tailors/${selectedTailor}`, {
+                 method: 'PUT',
+                 body: JSON.stringify({ ...currentTailor, email: tailorEmail })
+             });
+             // Update local list
+             setTailors(tailors.map(t => t.id === selectedTailor ? updated : t));
+          } catch(e) {
+              console.error("Failed to update tailor email", e);
+              if(!confirm("Failed to update tailor email. Continue creating order anyway?")) return;
+          }
+      }
+
       const orderLines = [];
 
       productEntries.forEach(entry => {
@@ -122,7 +156,8 @@ export default function CreateOrder() {
           // school_id: selectedSchool || null, // REMOVED
           created_at: new Date(orderDate).toISOString(),
           notes,
-          order_lines: orderLines
+          order_lines: orderLines,
+          send_email: sendEmail
       };
 
       try {
@@ -153,6 +188,35 @@ export default function CreateOrder() {
                 />
             </div>
           </div>
+          
+          <div className="form-group flex gap-4 items-end">
+             <div className="flex-1">
+                 <label>Tailor Email</label>
+                 <input 
+                    type="email" 
+                    className="input" 
+                    value={tailorEmail} 
+                    onChange={e => setTailorEmail(e.target.value)}
+                    placeholder="Enter email to update..."
+                 />
+             </div>
+             <div style={{ marginBottom: '0.6rem' }}>
+                 <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
+                     <input 
+                        type="checkbox" 
+                        checked={sendEmail} 
+                        onChange={e => setSendEmail(e.target.checked)} 
+                     />
+                     Send Email Notification
+                 </label>
+             </div>
+          </div>
+          
+          {selectedTailor && (
+              <div style={{ marginLeft: '1rem', marginTop: '-0.5rem', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                  {/* Current stored email debug or confirmation if needed, but input shows current value */}
+              </div>
+          )}
           {/* Global School Selection REMOVED */}
 
           <div className="form-group">
@@ -274,8 +338,9 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 
             {selectedProduct && (
                 <div style={{ paddingLeft: '1rem', borderLeft: '3px solid #eee' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) 100px 1fr 100px', gap: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#666' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) 100px 100px 1fr 100px', gap: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#666' }}>
                         <div>Size</div>
+                        <div>Material/Unit</div>
                         <div>Quantity</div>
                         <div>Material Rule</div>
                         <div>Required</div>
@@ -302,9 +367,28 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 }
 
 function SizeRow({ size, data, rules, onChange }) {
+    // Helper to get display value for material/unit
+    const getMaterialPerUnitDisplay = () => {
+        if (data.materialPerUnit) {
+            return `${data.materialPerUnit} ${data.unit}`;
+        }
+        // If no rule selected yet but rules exist, maybe show first rule's info as hint?
+        // Or just show '-' until selected. 
+        // The logic in handleSizeUpdate auto-selects first rule on quantity change.
+        // So initially it's fine to show '-' or if we want to be proactive show the defaults.
+        if (rules.length > 0) {
+             const r = rules[0];
+             return `${r.length_required} ${r.unit}`;
+        }
+        return '-';
+    };
+
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) 100px 1fr 100px', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) 100px 100px 1fr 100px', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
             <div style={{ fontWeight: 'bold' }}>{size.label}</div>
+            <div style={{ fontSize: '0.9rem', color: '#555' }}>
+                {getMaterialPerUnitDisplay()}
+            </div>
             <div>
                  <input 
                     type="number" 
@@ -322,12 +406,12 @@ function SizeRow({ size, data, rules, onChange }) {
                         className="input" 
                         value={data.ruleId || ""} 
                         onChange={e => onChange('ruleId', e.target.value)}
-                        disabled={!data.quantity} 
+                        // disabled={!data.quantity} // Allow changing rule even if quantity is 0, so user can see material/unit change
                         style={{ padding: '0.3rem', fontSize: '0.9rem' }}
                     >
                          {rules.map(r => (
                             <option key={r.id} value={r.id}>
-                                {r.fabric_width_inches ? `${r.fabric_width_inches}"` : 'Standard'} ({r.length_required} {r.unit})
+                                {r.fabric_width_inches ? `${r.fabric_width_inches}"` : 'Standard'}
                             </option>
                          ))}
                     </select>
@@ -339,3 +423,4 @@ function SizeRow({ size, data, rules, onChange }) {
         </div>
     )
 }
+

@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import models, schemas
 from ..database import get_db
+from ..database import get_db
 from datetime import datetime
+from ..utils.email_utils import send_order_email
 
 router = APIRouter(
     prefix="/orders",
@@ -56,6 +58,16 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     
     db.commit()
     db.refresh(db_order)
+    
+    # Send Email
+    try:
+        # Check explicit flag AND presence of email
+        if order.send_email and db_order.tailor.email:
+            order_response = map_order_response(db_order)
+            send_order_email(db_order.tailor.email, order_response.dict())
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
     return map_order_response(db_order)
 
 @router.get("/", response_model=List[schemas.Order])

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchAPI } from '../api';
 
+import PrintableOrder from '../components/PrintableOrder';
+
 export default function OrderDetails() {
   const { id } = useParams();
   const [order, setOrder] = useState(null);
@@ -23,20 +25,27 @@ export default function OrderDetails() {
     }
   }
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   if (loading) return <div>Loading...</div>;
   if (!order) return <div>Order not found</div>;
 
   return (
     <div>
-      <div className="flex justify-between items-center" style={{marginBottom: '1rem'}}>
+      <div className="no-print flex justify-between items-center" style={{marginBottom: '1rem'}}>
         <div>
             <h1>Order #{order.id}</h1>
             <div style={{ color: '#666' }}>Tailor: {order.tailor_name} | Status: {order.status}</div>
         </div>
-        <Link to="/" className="btn">Back to List</Link>
+        <div className="flex gap-2">
+            <button className="btn" onClick={handlePrint}>Print / Save PDF</button>
+            <Link to="/" className="btn" style={{background: '#6b7280'}}>Back to List</Link>
+        </div>
       </div>
 
-      <div className="card">
+      <div className="no-print card">
         <h3>Items</h3>
 
         <table style={{ border: 'none', boxShadow: 'none' }}>
@@ -44,8 +53,7 @@ export default function OrderDetails() {
                 <tr>
                     <th>Product</th>
                     <th>Size</th>
-                    <th>Mat. Req</th>
-                    <th>Used</th>
+                    <th>Material / Unit</th>
                     <th>In Hand</th>
                     <th>Ordered</th>
                     <th>Delivered</th>
@@ -60,6 +68,8 @@ export default function OrderDetails() {
             </tbody>
         </table>
       </div>
+
+      <PrintableOrder order={order} />
     </div>
   );
 }
@@ -88,7 +98,6 @@ function OrderLineRow({ line, onUpdate }) {
     }
 
     // Column Calculations
-    const materialUsedTotal = (line.delivered_qty * line.material_req_per_unit).toFixed(2);
     const materialInHand = (line.pending_qty * line.material_req_per_unit).toFixed(2);
 
     return (
@@ -97,7 +106,6 @@ function OrderLineRow({ line, onUpdate }) {
                 <td><strong>{line.product_name}</strong></td>
                 <td>{line.size_label}</td>
                 <td>{line.material_req_per_unit} {line.unit}</td>
-                <td><strong>{materialUsedTotal}</strong> {line.unit}</td>
                 <td style={{ color: '#666' }}>{materialInHand} {line.unit}</td>
                 <td>{line.quantity}</td>
                 <td>{line.delivered_qty}</td>
@@ -136,7 +144,7 @@ function OrderLineRow({ line, onUpdate }) {
             </tr>
             {showHistory && (
                 <tr>
-                    <td colSpan="9" style={{ background: '#f9f9f9', padding: '0.5rem 2rem' }}>
+                    <td colSpan="8" style={{ background: '#f9f9f9', padding: '0.5rem 2rem' }}>
                         <strong>Delivery History</strong>
                         {line.deliveries && line.deliveries.length > 0 ? (
                             <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>

@@ -112,3 +112,16 @@ def create_tailor(tailor: schemas.TailorCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_tailor)
     return db_tailor
+
+@router.put("/tailors/{tailor_id}", response_model=schemas.Tailor)
+def update_tailor(tailor_id: int, tailor: schemas.TailorCreate, db: Session = Depends(get_db)):
+    db_tailor = db.query(models.Tailor).filter(models.Tailor.id == tailor_id).first()
+    if not db_tailor:
+        raise HTTPException(status_code=404, detail="Tailor not found")
+    
+    for key, value in tailor.dict().items():
+        setattr(db_tailor, key, value)
+    
+    db.commit()
+    db.refresh(db_tailor)
+    return db_tailor

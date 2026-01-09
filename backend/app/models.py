@@ -46,6 +46,7 @@ class Tailor(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
     phone = Column(String, nullable=True)
+    email = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
 
     orders = relationship("Order", back_populates="tailor")

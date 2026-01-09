@@ -53,6 +53,7 @@ class Product(ProductBase):
 class TailorBase(BaseModel):
     name: str
     phone: Optional[str] = None
+    email: Optional[str] = None
     is_active: bool = True
 
 class TailorCreate(TailorBase):

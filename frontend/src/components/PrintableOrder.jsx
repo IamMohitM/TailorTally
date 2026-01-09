@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatDate } from '../utils';
 
 const PrintableOrder = ({ order }) => {
   if (!order) return null;
@@ -60,7 +61,7 @@ const PrintableOrder = ({ order }) => {
                             <tbody>
                                 {line.deliveries.map(d => (
                                     <tr key={d.id}>
-                                        <td>{new Date(d.date_delivered).toLocaleString()}</td>
+                                        <td>{formatDate(d.date_delivered)}</td>
                                         <td>{d.quantity_delivered}</td>
                                     </tr>
                                 ))}

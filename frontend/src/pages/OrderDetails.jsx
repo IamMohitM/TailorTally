@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchAPI } from '../api';
+import { formatDate } from '../utils';
 
 import PrintableOrder from '../components/PrintableOrder';
 
@@ -79,6 +80,8 @@ export default function OrderDetails() {
 function OrderLineRow({ line, onUpdate }) {
     const isCompleted = line.pending_qty <= 0;
     const [deliveryQty, setDeliveryQty] = useState("");
+    // Default to today's date in YYYY-MM-DD format for the input
+    const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
     const [recording, setRecording] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
 
@@ -87,7 +90,10 @@ function OrderLineRow({ line, onUpdate }) {
         try {
             await fetchAPI(`/orders/lines/${line.id}/deliveries`, {
                 method: 'POST',
-                body: JSON.stringify({ quantity_delivered: parseInt(deliveryQty) })
+                body: JSON.stringify({ 
+                    quantity_delivered: parseInt(deliveryQty),
+                    date_delivered: new Date(deliveryDate).toISOString() 
+                })
             });
             setRecording(false);
             setDeliveryQty("");
@@ -117,6 +123,13 @@ function OrderLineRow({ line, onUpdate }) {
                         ) : (
                             recording ? (
                                 <div className="flex gap-1 items-center">
+                                    <input 
+                                        type="date" 
+                                        className="input" 
+                                        style={{ padding: '0.2rem' }} 
+                                        value={deliveryDate} 
+                                        onChange={e => setDeliveryDate(e.target.value)}
+                                    />
                                     <input 
                                         type="number" 
                                         className="input" 
@@ -150,7 +163,7 @@ function OrderLineRow({ line, onUpdate }) {
                             <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>
                                 {line.deliveries.map(d => (
                                     <li key={d.id}>
-                                        {new Date(d.date_delivered).toLocaleString()}: <strong>{d.quantity_delivered}</strong> delivered
+                                        {formatDate(d.date_delivered)}: <strong>{d.quantity_delivered}</strong> delivered
                                     </li>
                                 ))}
                             </ul>

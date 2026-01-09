@@ -148,12 +148,18 @@ export default function OrderList() {
               <th>Tailor</th>
               <th>School</th>
               <th>Date</th>
+              <th>Progress</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {orders.map(order => (
+            {orders.map(order => {
+              const totalQty = order.order_lines.reduce((sum, line) => sum + line.quantity, 0);
+              const deliveredQty = order.order_lines.reduce((sum, line) => sum + (line.delivered_qty || 0), 0);
+              const progress = totalQty > 0 ? Math.round((deliveredQty / totalQty) * 100) : 0;
+
+              return (
               <tr key={order.id}>
                 <td>#{order.id}</td>
                 <td>{order.tailor_name}</td>
@@ -164,6 +170,17 @@ export default function OrderList() {
                     })()}
                 </td>
                 <td>{new Date(order.created_at).toLocaleDateString()}</td>
+                <td>
+                  <div className="progress-wrapper">
+                    <div className="progress-container">
+                      <div 
+                        className={`progress-bar ${progress === 100 ? 'complete' : 'partial'}`} 
+                        style={{width: `${progress}%`}}
+                      ></div>
+                    </div>
+                    <span className="progress-text">{progress}%</span>
+                  </div>
+                </td>
                 <td>
                   <span className={`px-2 py-1 rounded text-sm ${
                     order.status === 'Completed' ? 'bg-green-100 text-green-800' :
@@ -177,10 +194,11 @@ export default function OrderList() {
                   <Link to={`/orders/${order.id}`} className="text-indigo-600 hover:text-indigo-900">View</Link>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {orders.length === 0 && (
               <tr>
-                <td colSpan="6" style={{textAlign: 'center', padding: '2rem'}}>
+                <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>
                   No orders found
                 </td>
               </tr>

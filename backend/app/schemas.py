@@ -83,6 +83,7 @@ class School(SchoolBase):
 
 class DeliveryCreate(BaseModel):
     quantity_delivered: int
+    date_delivered: Optional[datetime] = None
 
 class Delivery(BaseModel):
     id: int

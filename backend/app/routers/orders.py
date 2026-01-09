@@ -126,7 +126,8 @@ def record_delivery(line_id: int, delivery: schemas.DeliveryCreate, db: Session 
 
     db_delivery = models.Delivery(
         order_line_id=line_id,
-        quantity_delivered=delivery.quantity_delivered
+        quantity_delivered=delivery.quantity_delivered,
+        date_delivered=delivery.date_delivered or datetime.utcnow()
     )
     db.add(db_delivery)
     db.commit()

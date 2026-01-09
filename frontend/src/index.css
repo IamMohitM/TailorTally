@@ -209,6 +209,7 @@ th {
   margin-bottom: 0.5rem;
   margin-left: 0.25rem;
 }
+
 /* Print Styles */
 @media print {
   .no-print {
@@ -273,16 +274,17 @@ th {
     font-size: 10pt;
   }
 
-  .print-stats-table th, .print-stats-table td {
+  .print-stats-table th,
+  .print-stats-table td {
     border: 1px solid #ddd;
     padding: 4px 8px;
     text-align: center;
   }
 
-    .print-stats-table th {
-        background-color: #f9f9f9;
-        font-weight: bold;
-    }
+  .print-stats-table th {
+    background-color: #f9f9f9;
+    font-weight: bold;
+  }
 
   .print-logs {
     margin-top: 10px;
@@ -290,10 +292,10 @@ th {
     border-top: 1px dashed #ccc;
     padding-top: 5px;
   }
-  
+
   .print-logs h4 {
-      margin: 5px 0;
-      font-size: 11pt;
+    margin: 5px 0;
+    font-size: 11pt;
   }
 
   .print-log-table {
@@ -302,16 +304,17 @@ th {
     font-size: 9pt;
   }
 
-  .print-log-table th, .print-log-table td {
+  .print-log-table th,
+  .print-log-table td {
     padding: 2px 8px;
     text-align: left;
     border-bottom: 1px solid #eee;
   }
-  
+
   .no-logs {
-      font-style: italic;
-      color: #666;
-      font-size: 9pt;
+    font-style: italic;
+    color: #666;
+    font-size: 9pt;
   }
 }
 
@@ -320,4 +323,49 @@ th {
   .printable-order {
     display: none;
   }
+}
+
+/* Progress Bar */
+.progress-container {
+  width: 100%;
+  background-color: #e5e7eb;
+  /* Gray-200 */
+  border-radius: 9999px;
+  height: 0.75rem;
+  /* h-3 */
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--primary-color);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.progress-text {
+  font-size: 0.75rem;
+  color: #374151;
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.progress-bar.complete {
+  background-color: var(--success-color);
+}
+
+.progress-bar.partial {
+  background-color: var(--primary-color);
 }

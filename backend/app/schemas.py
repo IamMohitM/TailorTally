@@ -143,3 +143,21 @@ class Order(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- Dashboard Schemas ---
+
+class ProductStat(BaseModel):
+    name: str
+    quantity: int
+
+class TailorStat(BaseModel):
+    name: str
+    order_count: int
+
+class DashboardStats(BaseModel):
+    pending_orders: int
+    material_issued: float
+    material_work_done: float
+    material_work_pending: float
+    top_products: List[ProductStat]
+    top_tailors: List[TailorStat]

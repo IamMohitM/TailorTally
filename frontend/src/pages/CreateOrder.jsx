@@ -11,7 +11,6 @@ export default function CreateOrder() {
   
   const [selectedTailor, setSelectedTailor] = useState("");
   const [tailorEmail, setTailorEmail] = useState(""); // State for email
-  const [sendEmail, setSendEmail] = useState(true); // State for checkbox
   const [selectedSchool, setSelectedSchool] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState("");
@@ -157,7 +156,7 @@ export default function CreateOrder() {
           created_at: new Date(orderDate).toISOString(),
           notes,
           order_lines: orderLines,
-          send_email: sendEmail
+          send_email: true
       };
 
       try {
@@ -175,63 +174,50 @@ export default function CreateOrder() {
     <div>
       <h1>Create New Order</h1>
       
-      <div className="card">
-          <div className="form-group">
-            <label>Select Tailor</label>
-            <div style={{ maxWidth: '400px' }}>
+      <div className="card" style={{ padding: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', alignItems: 'end' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Tailor</label>
                 <Combobox 
                     options={tailors}
                     value={selectedTailor}
                     onChange={setSelectedTailor}
                     onCreate={handleCreateTailor}
-                    placeholder="Search or create tailor..."
+                    placeholder="Search/create tailor..."
                 />
-            </div>
-          </div>
-          
-          <div className="form-group flex gap-4 items-end">
-             <div className="flex-1">
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: 0 }}>
                  <label>Tailor Email</label>
                  <input 
                     type="email" 
                     className="input" 
                     value={tailorEmail} 
                     onChange={e => setTailorEmail(e.target.value)}
-                    placeholder="Enter email to update..."
+                    placeholder="Enter email..."
                  />
-             </div>
-             <div style={{ marginBottom: '0.6rem' }}>
-                 <label className="flex items-center gap-2" style={{ cursor: 'pointer' }}>
-                     <input 
-                        type="checkbox" 
-                        checked={sendEmail} 
-                        onChange={e => setSendEmail(e.target.checked)} 
-                     />
-                     Send Email Notification
-                 </label>
-             </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Date</label>
+                <input 
+                    type="date" 
+                    className="input" 
+                    value={orderDate} 
+                    onChange={e => setOrderDate(e.target.value)} 
+                />
+              </div>
           </div>
           
-          {selectedTailor && (
-              <div style={{ marginLeft: '1rem', marginTop: '-0.5rem', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
-                  {/* Current stored email debug or confirmation if needed, but input shows current value */}
-              </div>
-          )}
-          {/* Global School Selection REMOVED */}
-
-          <div className="form-group">
-            <label>Date</label>
-            <input 
-                type="date" 
-                className="input" 
-                style={{ maxWidth: '200px' }}
-                value={orderDate} 
-                onChange={e => setOrderDate(e.target.value)} 
-            />
-          </div>
-          <div className="form-group">
+          <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
               <label>Notes</label>
-              <textarea className="input" value={notes} onChange={e => setNotes(e.target.value)} />
+              <textarea 
+                className="input" 
+                value={notes} 
+                onChange={e => setNotes(e.target.value)} 
+                rows="1"
+                style={{ resize: 'vertical', minHeight: '38px' }}
+              />
           </div>
       </div>
 
@@ -306,44 +292,42 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
     };
 
     return (
-        <div className="card" style={{ background: '#fafafa', marginBottom: '1rem' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '1rem' }}>
-                <h4 style={{ margin: 0 }}>Product Group #{index + 1}</h4>
-                <button className="btn danger" style={{ padding: '0.2rem 0.5rem' }} onClick={onRemove}>X</button>
-            </div>
-            
-            <div className="flex gap-4 mb-4">
-                <div className="form-group flex-1">
-                    <label>Product</label>
-                    <select 
-                        className="input" 
-                        value={entry.productId} 
-                        onChange={e => onUpdate('productId', e.target.value)}
-                    >
-                        <option value="">Select Product...</option>
-                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
+        <div className="card" style={{ background: '#fafafa', marginBottom: '0.75rem', padding: '0.75rem' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
+                <div className="flex gap-4 flex-1">
+                    <div className="form-group flex-1" style={{ marginBottom: 0 }}>
+                        <select 
+                            className="input" 
+                            style={{ fontWeight: 'bold', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '1.1rem' }}
+                            value={entry.productId} 
+                            onChange={e => onUpdate('productId', e.target.value)}
+                        >
+                            <option value="">Select Product...</option>
+                            {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                    </div>
+                    <div className="form-group flex-1" style={{ marginBottom: 0, position: 'relative' }}>
+                         <Combobox 
+                            options={schools}
+                            value={entry.schoolId}
+                            onChange={(val) => onUpdate('schoolId', val)}
+                            onCreate={onCreateSchool}
+                            placeholder="Select School (Optional)..."
+                            inputStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px' }}
+                        />
+                    </div>
                 </div>
-                <div className="form-group flex-1">
-                     <label>School</label>
-                     <Combobox 
-                        options={schools}
-                        value={entry.schoolId}
-                        onChange={(val) => onUpdate('schoolId', val)}
-                        onCreate={onCreateSchool}
-                        placeholder="Select School (Optional)..."
-                    />
-                </div>
+                <button className="btn danger" style={{ padding: '0.2rem 0.5rem', marginLeft: '1rem' }} onClick={onRemove}>X</button>
             </div>
 
             {selectedProduct && (
-                <div style={{ paddingLeft: '1rem', borderLeft: '3px solid #eee' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) 100px 100px 1fr 100px', gap: '1rem', marginBottom: '0.5rem', fontWeight: 'bold', fontSize: '0.9rem', color: '#666' }}>
+                <div style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px 100px 100px 1fr 100px', gap: '0.75rem', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#888', textTransform: 'uppercase' }}>
                         <div>Size</div>
-                        <div>Material/Unit</div>
+                        <div>Material/Unt</div>
                         <div>Quantity</div>
-                        <div>Material Rule</div>
-                        <div>Required</div>
+                        <div>Rule</div>
+                        <div style={{ textAlign: 'right' }}>Total</div>
                     </div>
                     
                     {sizes.map(size => {
@@ -367,15 +351,10 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 }
 
 function SizeRow({ size, data, rules, onChange }) {
-    // Helper to get display value for material/unit
     const getMaterialPerUnitDisplay = () => {
         if (data.materialPerUnit) {
             return `${data.materialPerUnit} ${data.unit}`;
         }
-        // If no rule selected yet but rules exist, maybe show first rule's info as hint?
-        // Or just show '-' until selected. 
-        // The logic in handleSizeUpdate auto-selects first rule on quantity change.
-        // So initially it's fine to show '-' or if we want to be proactive show the defaults.
         if (rules.length > 0) {
              const r = rules[0];
              return `${r.length_required} ${r.unit}`;
@@ -384,9 +363,16 @@ function SizeRow({ size, data, rules, onChange }) {
     };
 
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 1fr) 100px 100px 1fr 100px', gap: '1rem', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <div style={{ fontWeight: 'bold' }}>{size.label}</div>
-            <div style={{ fontSize: '0.9rem', color: '#555' }}>
+        <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '80px 100px 100px 1fr 100px', 
+            gap: '0.75rem', 
+            alignItems: 'center', 
+            padding: '2px 0',
+            borderBottom: '1px solid #f0f0f0' 
+        }}>
+            <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{size.label}</div>
+            <div style={{ fontSize: '0.85rem', color: '#666' }}>
                 {getMaterialPerUnitDisplay()}
             </div>
             <div>
@@ -397,7 +383,7 @@ function SizeRow({ size, data, rules, onChange }) {
                     min="0"
                     value={data.quantity} 
                     onChange={e => onChange('quantity', e.target.value)}
-                    style={{ padding: '0.3rem' }}
+                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.9rem' }}
                  />
             </div>
             <div>
@@ -406,18 +392,17 @@ function SizeRow({ size, data, rules, onChange }) {
                         className="input" 
                         value={data.ruleId || ""} 
                         onChange={e => onChange('ruleId', e.target.value)}
-                        // disabled={!data.quantity} // Allow changing rule even if quantity is 0, so user can see material/unit change
-                        style={{ padding: '0.3rem', fontSize: '0.9rem' }}
+                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }}
                     >
                          {rules.map(r => (
                             <option key={r.id} value={r.id}>
-                                {r.fabric_width_inches ? `${r.fabric_width_inches}"` : 'Standard'}
+                                {r.fabric_width_inches ? `${r.fabric_width_inches}"` : 'Std'}
                             </option>
                          ))}
                     </select>
-                ) : <span style={{fontSize: '0.8rem', color: '#999'}}>No rules</span>}
+                ) : <span style={{fontSize: '0.75rem', color: '#999'}}>No rules</span>}
             </div>
-            <div style={{ fontSize: '0.9rem' }}>
+            <div style={{ fontSize: '0.9rem', textAlign: 'right', fontWeight: data.totalMaterial > 0 ? '600' : 'normal' }}>
                 {data.totalMaterial > 0 ? `${data.totalMaterial.toFixed(2)} ${data.unit}` : '-'}
             </div>
         </div>

@@ -5,7 +5,8 @@ export default function Combobox({
     value, 
     onChange, 
     onCreate, 
-    placeholder = "Select..." 
+    placeholder = "Select...",
+    inputStyle = {} 
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -79,7 +80,7 @@ export default function Combobox({
                         }
                     }
                 }}
-                style={{ width: '100%' }}
+                style={{ width: '100%', ...inputStyle }}
             />
             
             {isOpen && (searchTerm || filteredOptions.length > 0) && (

@@ -58,7 +58,6 @@ export default function OrderList() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1>Orders</h1>
-        <Link to="/create-order" className="btn">New Order</Link>
       </div>
 
       <div className="controls-container">

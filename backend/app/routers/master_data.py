@@ -15,7 +15,7 @@ router = APIRouter(
 
 @router.get("/products", response_model=List[schemas.Product])
 def read_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    products = db.query(models.Product).offset(skip).limit(limit).all()
+    products = db.query(models.Product).order_by(models.Product.name).offset(skip).limit(limit).all()
     return products
 
 @router.post("/products", response_model=schemas.Product)

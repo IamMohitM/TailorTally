@@ -7,20 +7,24 @@ import MasterData from './pages/MasterData';
 import OrderDetails from './pages/OrderDetails';
 import Dashboard from './pages/Dashboard';
 
+import { NotificationProvider } from './components/Notification';
+
 function App() {
   return (
-    <Router>
-      <Navbar />
-      <div className="container">
-        <Routes>
-          <Route path="/" element={<OrderList />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/create-order" element={<CreateOrder />} />
-          <Route path="/master-data" element={<MasterData />} />
-          <Route path="/orders/:id" element={<OrderDetails />} />
-        </Routes>
-      </div>
-    </Router>
+    <NotificationProvider>
+      <Router>
+        <Navbar />
+        <div className="container">
+          <Routes>
+            <Route path="/" element={<OrderList />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/create-order" element={<CreateOrder />} />
+            <Route path="/master-data" element={<MasterData />} />
+            <Route path="/orders/:id" element={<OrderDetails />} />
+          </Routes>
+        </div>
+      </Router>
+    </NotificationProvider>
   );
 }
 

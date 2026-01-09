@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchAPI } from '../api';
+import { useNotification } from '../components/Notification';
 
 export default function MasterData() {
   const [products, setProducts] = useState([]);
@@ -8,6 +9,7 @@ export default function MasterData() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProductName, setNewProductName] = useState("");
+  const { showToast, showConfirm } = useNotification();
 
   useEffect(() => {
     loadProducts();
@@ -17,15 +19,19 @@ export default function MasterData() {
     setLoading(true);
     try {
       const data = await fetchAPI('/master-data/products');
-      setProducts(data);
-      if (data.length > 0 && !selectedProduct) {
-        setSelectedProduct(data[0]);
+      // Extra safety: sort alphabetically by name
+      const sortedData = [...data].sort((a, b) => a.name.localeCompare(b.name));
+      setProducts(sortedData);
+      
+      if (sortedData.length > 0 && !selectedProduct) {
+        setSelectedProduct(sortedData[0]);
       } else if (selectedProduct) {
-        const updated = data.find(p => p.id === selectedProduct.id);
+        const updated = sortedData.find(p => p.id === selectedProduct.id);
         if (updated) setSelectedProduct(updated);
       }
     } catch (e) {
       console.error(e);
+      showToast("Failed to load products", "error");
     } finally {
       setLoading(false);
     }
@@ -38,12 +44,17 @@ export default function MasterData() {
         method: 'POST',
         body: JSON.stringify({ name: newProductName, category: 'General' })
       });
-      setProducts([...products, { ...newP, sizes: [] }]);
+      const newProduct = { ...newP, sizes: [] };
+      setProducts(prev => {
+          const updated = [...prev, newProduct];
+          return updated.sort((a, b) => a.name.localeCompare(b.name));
+      });
       setNewProductName("");
       setIsAddingProduct(false);
-      setSelectedProduct({ ...newP, sizes: [] });
+      setSelectedProduct(newProduct);
+      showToast("Product created successfully", "success");
     } catch (e) {
-      alert("Failed to create product");
+      showToast("Failed to create product", "error");
     }
   }
 
@@ -55,19 +66,25 @@ export default function MasterData() {
     
     setLoading(true);
     try {
-      await fetch('http://localhost:8000/master-data/upload', {
+      const response = await fetch('http://localhost:8000/master-data/upload', {
         method: 'POST',
         body: formData,
       });
-      alert('Upload successful!');
+      
+      if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || "Upload failed");
+      }
+      
+      showToast('Upload successful!', 'success');
       loadProducts();
     } catch (err) {
       console.error(err);
-      alert('Upload failed');
+      showToast(err.message || 'Upload failed', 'error');
     } finally {
       setLoading(false);
       // Reset input value to allow re-uploading the same file
-      e.target.value = '';
+      if (e.target) e.target.value = '';
     }
   }
 
@@ -163,6 +180,7 @@ export default function MasterData() {
 }
 
 function ProductDetails({ product, onRefresh }) {
+  const { showToast, showConfirm } = useNotification();
   const [isEditing, setIsEditing] = useState(false);
   const [editedProduct, setEditedProduct] = useState(null);
   const [isAddingSize, setIsAddingSize] = useState(false);
@@ -219,7 +237,7 @@ function ProductDetails({ product, onRefresh }) {
       setIsAddingSize(false);
       onRefresh();
     } catch (e) {
-      alert("Failed to add size");
+      showToast("Failed to add size", "error");
     }
   };
 
@@ -262,21 +280,28 @@ function ProductDetails({ product, onRefresh }) {
       
       setIsEditing(false);
       onRefresh();
+      showToast("Rules saved successfully", "success");
     } catch (e) {
       console.error(e);
-      alert("Failed to save rules");
+      showToast(e.message || "Failed to save rules", "error");
     }
   };
 
-  const handleDelete = async () => {
-      if (!confirm(`Are you sure you want to delete ${product.name}? This cannot be undone.`)) return;
-      try {
+  const handleDelete = () => {
+    showConfirm(
+      "Delete Product",
+      `Are you sure you want to delete ${product.name}? This cannot be undone.`,
+      async () => {
+        try {
           await fetchAPI(`/master-data/products/${product.id}`, { method: 'DELETE' });
+          showToast("Product deleted successfully", "success");
           onRefresh();
-      } catch (e) {
-          alert("Failed to delete product. It may be in use by existing orders.");
+        } catch (e) {
+          showToast(e.message || "Failed to delete product. It may be in use.", "error");
+        }
       }
-  }
+    );
+  };
 
   return (
     <>

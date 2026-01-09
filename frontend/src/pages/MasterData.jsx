@@ -110,9 +110,9 @@ export default function MasterData() {
             </button>
           )}
 
-          <div style={{ marginTop: '0.75rem', borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem' }}>
+          <div style={{ marginTop: '0.75rem', borderTop: '1px solid #e5e7eb', paddingTop: '1rem' }}>
             <label className="btn secondary" style={{ width: '100%', display: 'block', textAlign: 'center', cursor: 'pointer' }}>
-               Upload CSV/Excel
+               ↑ Upload CSV/Excel
               <input 
                 type="file" 
                 hidden 

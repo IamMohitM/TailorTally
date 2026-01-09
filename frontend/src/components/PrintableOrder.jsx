@@ -21,7 +21,7 @@ const PrintableOrder = ({ order }) => {
             <div key={line.id} className="print-item-block">
                 <div className="print-item-header">
                     <span className="item-number">#{index + 1}</span>
-                    <span className="item-name">{line.product_name} - {line.size_label}</span>
+                    <span className="item-name">{line.product_name} - {line.size_label} {line.school_name ? `(${line.school_name})` : ''}</span>
                     <span className="item-qty">Qty: {line.quantity}</span>
                 </div>
                 

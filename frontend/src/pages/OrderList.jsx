@@ -64,7 +64,7 @@ export default function OrderList() {
       <div className="controls-container">
         {/* Search */}
         <div className="control-group">
-          <label className="control-label">Search Orders</label>
+          <label className="control-label">Search   </label>
           <div className="input-wrapper">
              <svg className="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
@@ -144,10 +144,9 @@ export default function OrderList() {
         <table className="w-full">
           <thead>
             <tr>
+              <th>Date</th>
               <th>Order ID</th>
               <th>Tailor</th>
-              <th>School</th>
-              <th>Date</th>
               <th>Progress</th>
               <th>Status</th>
               <th>Actions</th>
@@ -161,15 +160,9 @@ export default function OrderList() {
 
               return (
               <tr key={order.id}>
+                <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 <td>#{order.id}</td>
                 <td>{order.tailor_name}</td>
-                <td>
-                    {(() => {
-                        const schoolNames = [...new Set(order.order_lines.map(line => line.school_name).filter(Boolean))];
-                        return schoolNames.length > 0 ? schoolNames.join(", ") : '-';
-                    })()}
-                </td>
-                <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 <td>
                   <div className="progress-wrapper">
                     <div className="progress-container">
@@ -198,7 +191,7 @@ export default function OrderList() {
             })}
             {orders.length === 0 && (
               <tr>
-                <td colSpan="7" style={{textAlign: 'center', padding: '2rem'}}>
+                <td colSpan="6" style={{textAlign: 'center', padding: '2rem'}}>
                   No orders found
                 </td>
               </tr>

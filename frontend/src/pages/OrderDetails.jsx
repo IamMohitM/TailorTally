@@ -53,6 +53,7 @@ export default function OrderDetails() {
             <thead>
                 <tr>
                     <th>Product</th>
+                    <th>School</th>
                     <th>Size</th>
                     <th>Material / Unit</th>
                     <th>In Hand</th>
@@ -110,6 +111,7 @@ function OrderLineRow({ line, onUpdate }) {
         <>
             <tr>
                 <td><strong>{line.product_name}</strong></td>
+                <td>{line.school_name || '-'}</td>
                 <td>{line.size_label}</td>
                 <td>{line.material_req_per_unit} {line.unit}</td>
                 <td style={{ color: '#666' }}>{materialInHand} {line.unit}</td>
@@ -157,7 +159,7 @@ function OrderLineRow({ line, onUpdate }) {
             </tr>
             {showHistory && (
                 <tr>
-                    <td colSpan="8" style={{ background: '#f9f9f9', padding: '0.5rem 2rem' }}>
+                    <td colSpan="9" style={{ background: '#f9f9f9', padding: '0.5rem 2rem' }}>
                         <strong>Delivery History</strong>
                         {line.deliveries && line.deliveries.length > 0 ? (
                             <ul style={{ margin: '0.5rem 0', paddingLeft: '1.5rem', fontSize: '0.9rem' }}>

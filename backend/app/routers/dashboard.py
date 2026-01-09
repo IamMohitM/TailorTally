@@ -11,8 +11,8 @@ router = APIRouter(
 
 @router.get("/stats", response_model=schemas.DashboardStats)
 def get_dashboard_stats(db: Session = Depends(get_db)):
-    # 1. Pending Orders
-    pending_orders = db.query(models.Order).filter(models.Order.status == "Pending").count()
+    # 1. Active Orders (Pending + In Progress)
+    active_orders = db.query(models.Order).filter(models.Order.status.in_(["Pending", "In Progress"])).count()
 
     # 2. Material Issued (Total total_material_req)
     material_issued = db.query(func.sum(models.OrderLine.total_material_req)).scalar() or 0.0
@@ -42,7 +42,7 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     top_tailors = [schemas.TailorStat(name=t[0], order_count=t[1]) for t in top_tailors_raw]
 
     return {
-        "pending_orders": pending_orders,
+        "active_orders": active_orders,
         "material_issued": round(material_issued, 2),
         "material_work_done": round(material_work_done, 2),
         "material_work_pending": round(material_work_pending, 2),

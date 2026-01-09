@@ -4,9 +4,8 @@ import { fetchAPI } from '../api';
 export default function MasterData() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [expandedProduct, setExpandedProduct] = useState(null);
-  
-  // New State
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [newProductName, setNewProductName] = useState("");
 
@@ -19,6 +18,12 @@ export default function MasterData() {
     try {
       const data = await fetchAPI('/master-data/products');
       setProducts(data);
+      if (data.length > 0 && !selectedProduct) {
+        setSelectedProduct(data[0]);
+      } else if (selectedProduct) {
+        const updated = data.find(p => p.id === selectedProduct.id);
+        if (updated) setSelectedProduct(updated);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -27,272 +32,393 @@ export default function MasterData() {
   }
 
   async function handleCreateProduct() {
-      if (!newProductName.trim()) return;
-      try {
-          const newP = await fetchAPI('/master-data/products', {
-              method: 'POST',
-              body: JSON.stringify({ name: newProductName, category: 'General' })
-          });
-          setProducts([...products, newP]);
-          setNewProductName("");
-          setIsAddingProduct(false);
-      } catch (e) {
-          alert("Failed to create product");
-      }
+    if (!newProductName.trim()) return;
+    try {
+      const newP = await fetchAPI('/master-data/products', {
+        method: 'POST',
+        body: JSON.stringify({ name: newProductName, category: 'General' })
+      });
+      setProducts([...products, { ...newP, sizes: [] }]);
+      setNewProductName("");
+      setIsAddingProduct(false);
+      setSelectedProduct({ ...newP, sizes: [] });
+    } catch (e) {
+      alert("Failed to create product");
+    }
   }
 
+  async function handleFileUpload(e) {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    setLoading(true);
+    try {
+      await fetch('http://localhost:8000/master-data/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      alert('Upload successful!');
+      loadProducts();
+    } catch (err) {
+      console.error(err);
+      alert('Upload failed');
+    } finally {
+      setLoading(false);
+      // Reset input value to allow re-uploading the same file
+      e.target.value = '';
+    }
+  }
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div>
-      <div className="flex justify-between items-center" style={{marginBottom: '1rem'}}>
-        <h1>Master Data</h1>
-        <button className="btn" onClick={() => setIsAddingProduct(true)}>+ Add Product</button>
+    <div className="master-data-container">
+      {/* Sidebar */}
+      <div className="sidebar">
+        <div className="sidebar-header">
+          <input 
+            className="input" 
+            placeholder="Search products..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{ marginBottom: isAddingProduct ? '1rem' : 0 }}
+          />
+          {isAddingProduct ? (
+            <div className="flex gap-2">
+              <input 
+                className="input" 
+                placeholder="Product Name" 
+                value={newProductName} 
+                autoFocus
+                onChange={e => setNewProductName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCreateProduct()}
+              />
+              <button className="btn success" onClick={handleCreateProduct}>Add</button>
+              <button className="btn-ghost" onClick={() => setIsAddingProduct(false)}>✕</button>
+            </div>
+          ) : (
+            <button 
+              className="btn" 
+              style={{ width: '100%', marginTop: '0.75rem' }} 
+              onClick={() => setIsAddingProduct(true)}
+            >
+              + Add Product
+            </button>
+          )}
+
+          <div style={{ marginTop: '0.75rem', borderTop: '1px solid #e5e7eb', paddingTop: '0.75rem' }}>
+            <label className="btn secondary" style={{ width: '100%', display: 'block', textAlign: 'center', cursor: 'pointer' }}>
+               Upload CSV/Excel
+              <input 
+                type="file" 
+                hidden 
+                accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                onChange={handleFileUpload}
+              />
+            </label>
+          </div>
+        </div>
+        <div className="sidebar-content">
+          {loading ? (
+            <div style={{ padding: '1rem', textAlign: 'center' }}>Loading products...</div>
+          ) : filteredProducts.length === 0 ? (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#9ca3af' }}>
+              No products found
+            </div>
+          ) : (
+            filteredProducts.map(product => (
+              <div 
+                key={product.id} 
+                className={`product-item ${selectedProduct?.id === product.id ? 'active' : ''}`}
+                onClick={() => setSelectedProduct(product)}
+              >
+                <h4>{product.name}</h4>
+                <p>{product.sizes?.length || 0} Sizes</p>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      {isAddingProduct && (
-          <div className="card">
-              <h3>New Product</h3>
-              <div className="flex gap-2">
-                  <input 
-                    className="input" 
-                    placeholder="Product Name" 
-                    value={newProductName} 
-                    onChange={e => setNewProductName(e.target.value)}
-                  />
-                  <button className="btn success" onClick={handleCreateProduct}>Save</button>
-                  <button className="btn danger" onClick={() => setIsAddingProduct(false)}>Cancel</button>
-              </div>
+      {/* Main Content */}
+      <div className="details-panel">
+        {selectedProduct ? (
+          <ProductDetails 
+            product={selectedProduct} 
+            onRefresh={loadProducts} 
+          />
+        ) : (
+          <div className="empty-state">
+            <h3>Select a product to view details</h3>
+            <p>You can manage sizes and material rules here.</p>
           </div>
-      )}
-
-      {loading ? <div>Loading...</div> : (
-        <div>
-          {products.map(product => (
-            <ProductRow 
-                key={product.id} 
-                product={product} 
-                expanded={expandedProduct === product.id}
-                onToggle={() => setExpandedProduct(expandedProduct === product.id ? null : product.id)}
-            />
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-function ProductRow({ product, expanded, onToggle }) {
-    return (
-        <div className="card" style={{ padding: '0.5rem 1rem' }}>
-            <div className="flex justify-between items-center" style={{ cursor: 'pointer' }} onClick={onToggle}>
-                <h3 style={{ margin: 0 }}>{product.name}</h3>
-                <div>
-                   <span style={{ fontSize: '0.9rem', color: '#666' }}>{product.sizes.length} Sizes</span>
-                   <span style={{ marginLeft: '1rem' }}>{expanded ? '▲' : '▼'}</span>
-                </div>
-            </div>
-            {expanded && (
-                <div style={{ marginTop: '1rem', borderTop: '1px solid #eee', paddingTop: '1rem' }}>
-                    <SizeManager product={product} />
-                </div>
-            )}
-        </div>
-    );
-}
+function ProductDetails({ product, onRefresh }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProduct, setEditedProduct] = useState(null);
+  const [isAddingSize, setIsAddingSize] = useState(false);
+  const [newSizeLabel, setNewSizeLabel] = useState("");
 
-function SizeManager({ product }) {
-    const [sizes, setSizes] = useState(product.sizes || []);
-    const [isAdding, setIsAdding] = useState(false);
-    const [newSizeLabel, setNewSizeLabel] = useState("");
+  useEffect(() => {
+    setEditedProduct(JSON.parse(JSON.stringify(product)));
+    setIsEditing(false);
+    setIsAddingSize(false);
+  }, [product]);
 
-    const refreshSizes = async () => {
-         // In a real app we might fetch just sizes, but here we used embedded. 
-         // Actually better to just refetch product or assume optimistic update?
-         // Let's assume passed prop is static and we manage local state for now.
+  const handleEditToggle = () => {
+    if (isEditing) {
+      setEditedProduct(JSON.parse(JSON.stringify(product)));
     }
+    setIsEditing(!isEditing);
+  };
 
-    async function handleAddSize() {
-        if (!newSizeLabel) return;
-        try {
-            const newS = await fetchAPI(`/master-data/products/${product.id}/sizes`, {
-                method: 'POST',
-                body: JSON.stringify({ label: newSizeLabel, order_index: sizes.length })
+  const handleRuleChange = (sizeIdx, ruleIdx, field, value) => {
+    const newP = { ...editedProduct };
+    newP.sizes[sizeIdx].material_rules[ruleIdx][field] = value;
+    setEditedProduct(newP);
+  };
+
+  const handleAddRule = (sizeIdx) => {
+    const newP = { ...editedProduct };
+    if (!newP.sizes[sizeIdx].material_rules) newP.sizes[sizeIdx].material_rules = [];
+    newP.sizes[sizeIdx].material_rules.push({
+      id: null,
+      fabric_width_inches: '',
+      length_required: 0,
+      unit: 'meters'
+    });
+    setEditedProduct(newP);
+  };
+
+  const handleRemoveRule = (sizeIdx, ruleIdx) => {
+    const newP = { ...editedProduct };
+    newP.sizes[sizeIdx].material_rules.splice(ruleIdx, 1);
+    setEditedProduct(newP);
+  };
+
+  const handleAddSize = async () => {
+    if (!newSizeLabel.trim()) return;
+    try {
+      await fetchAPI(`/master-data/products/${product.id}/sizes`, {
+        method: 'POST',
+        body: JSON.stringify({ 
+          label: newSizeLabel, 
+          order_index: product.sizes.length 
+        })
+      });
+      setNewSizeLabel("");
+      setIsAddingSize(false);
+      onRefresh();
+    } catch (e) {
+      alert("Failed to add size");
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      // For each size and rule, we need to call the appropriate API.
+      // This is a bit inefficient but matches the current backend structure.
+      // Ideally, the backend would support a bulk update.
+      for (const size of editedProduct.sizes) {
+        // Update size (if label changed or other fields added later)
+        // Currently API doesn't seem to have a PUT for size label specifically, 
+        // but we can add rules.
+        
+        for (const rule of size.material_rules) {
+          if (rule.id) {
+            await fetchAPI(`/master-data/rules/${rule.id}`, {
+              method: 'PUT',
+              body: JSON.stringify({
+                fabric_width_inches: rule.fabric_width_inches ? parseInt(rule.fabric_width_inches) : null,
+                length_required: parseFloat(rule.length_required),
+                unit: rule.unit
+              })
             });
-            // Update local sizes
-            setSizes([...sizes, newS]);
-            setNewSizeLabel("");
-            setIsAdding(false);
-        } catch (e) {
-            alert("Failed to add size");
+          } else {
+            await fetchAPI(`/master-data/sizes/${size.id}/rules`, {
+              method: 'POST',
+              body: JSON.stringify({
+                fabric_width_inches: rule.fabric_width_inches ? parseInt(rule.fabric_width_inches) : null,
+                length_required: parseFloat(rule.length_required),
+                unit: rule.unit
+              })
+            });
+          }
         }
+      }
+      
+      // Cleanup: We don't have a DELETE rule API shown in previous code, 
+      // but if we did, we'd call it for removed rules.
+      // Since it's not shown, we'll assume the user only adds/edits.
+      
+      setIsEditing(false);
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save rules");
     }
+  };
 
-    return (
+  const handleDelete = async () => {
+      if (!confirm(`Are you sure you want to delete ${product.name}? This cannot be undone.`)) return;
+      try {
+          await fetchAPI(`/master-data/products/${product.id}`, { method: 'DELETE' });
+          onRefresh();
+      } catch (e) {
+          alert("Failed to delete product. It may be in use by existing orders.");
+      }
+  }
+
+  return (
+    <>
+      <div className="details-header">
         <div>
-            <div className="flex justify-between items-center">
-                <h4>Sizes</h4>
-                <button className="btn" style={{ fontSize: '0.8rem', padding: '0.2rem 0.5rem' }} onClick={() => setIsAdding(true)}>+ Add Size</button>
-            </div>
-            
-            {isAdding && (
-                <div className="flex gap-2" style={{ marginBottom: '1rem' }}>
-                    <input className="input" placeholder="Size Label (e.g. 38, L)" value={newSizeLabel} onChange={e => setNewSizeLabel(e.target.value)} />
-                    <button className="btn success" onClick={handleAddSize}>Save</button>
-                    <button className="btn" onClick={() => setIsAdding(false)}>Cancel</button>
-                </div>
-            )}
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {sizes.map(size => (
-                    <SizeCard key={size.id} size={size} />
-                ))}
-            </div>
+          <h2 style={{ margin: 0 }}>{product.name}</h2>
+          <span className="badge">{product.category || 'General'}</span>
         </div>
-    )
-}
+        <div className="flex gap-2">
+          {isEditing ? (
+            <>
+              <button className="btn success" onClick={handleSave}>Save Changes</button>
+              <button className="btn-ghost" onClick={handleEditToggle}>Cancel</button>
+            </>
+          ) : (
+            <>
+              <button className="btn" onClick={handleEditToggle}>Edit Rules</button>
+              <button className="btn danger" onClick={handleDelete}>Delete</button>
+            </>
+          )}
+        </div>
+      </div>
+      
+      <div className="details-content">
+        <div className="section-title">
+          <span>Sizes & Material Rules</span>
+          {!isEditing && (
+            <div className="flex gap-2 items-center">
+              {isAddingSize ? (
+                <div className="flex gap-1">
+                  <input 
+                    className="input" 
+                    placeholder="New Size (e.g. 40)" 
+                    style={{ width: '150px', padding: '0.25rem 0.5rem' }} 
+                    value={newSizeLabel}
+                    onChange={e => setNewSizeLabel(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleAddSize()}
+                  />
+                  <button className="btn success" style={{ padding: '0.25rem 0.5rem' }} onClick={handleAddSize}>Add</button>
+                  <button className="btn-ghost" onClick={() => setIsAddingSize(false)}>✕</button>
+                </div>
+              ) : (
+                <button className="btn" style={{ padding: '0.25rem 0.5rem', fontSize: '0.875rem' }} onClick={() => setIsAddingSize(true)}>+ Add Size</button>
+              )}
+            </div>
+          )}
+        </div>
 
-function SizeCard({ size }) {
-    const [rules, setRules] = useState(size.material_rules || []);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editedRules, setEditedRules] = useState([]);
-
-    useEffect(() => {
-        setRules(size.material_rules || []);
-        // Initialize edited rules with current rules plus a potential new one? No, just current.
-        setEditedRules(size.material_rules ? size.material_rules.map(r => ({ ...r })) : []);
-    }, [size]);
-
-    const handleEditToggle = () => {
-        if (!isEditing) {
-            // Enter edit mode: clone rules
-            setEditedRules(rules.map(r => ({ ...r })));
-        } else {
-            // Cancel edit: revert is handled by not saving
-        }
-        setIsEditing(!isEditing);
-    };
-
-    const handleRuleChange = (index, field, value) => {
-        const newRules = [...editedRules];
-        newRules[index] = { ...newRules[index], [field]: value };
-        setEditedRules(newRules);
-    };
-
-    const handleSave = async () => {
-        try {
-            // Update all rules
-            // In a real app, might want to only update changed ones.
-            // But here we iterate.
-            for (const rule of editedRules) {
-                if (rule.id) {
-                     await fetchAPI(`/master-data/rules/${rule.id}`, {
-                        method: 'PUT',
-                        body: JSON.stringify({
-                             fabric_width_inches: rule.fabric_width_inches ? parseInt(rule.fabric_width_inches) : null,
-                             length_required: parseFloat(rule.length_required),
-                             unit: rule.unit
-                        })
-                    });
-                } else {
-                    // New rule
-                    await fetchAPI(`/master-data/sizes/${size.id}/rules`, {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            fabric_width_inches: rule.fabric_width_inches ? parseInt(rule.fabric_width_inches) : null,
-                            length_required: parseFloat(rule.length_required),
-                            unit: rule.unit
-                       })
-                   });
-                }
-            }
-            
-            // Refresh rules? We can just update local state if we trust the loop.
-            // Better to refetch or just update local based on success.
-            // Let's rely on basic success.
-            setRules(editedRules); // Note: IDs for new rules won't be here. 
-            // Ideally we need to reload content from server to get IDs for new rules.
-            // For now, let's just toggle off. If user edits again immediately, new rule won't have ID.
-            // So we really should trigger a reload or handle updates better.
-            // Checking how master data handles updates... it doesn't pass a "onRefresh" to SizeCard.
-            // Let's add onRefresh to SizeCard props.
-            alert("Rules updated! (Please refresh to see new IDs if you added rules)"); 
-            // In a pro app, we'd refetch.
-            setIsEditing(false);
-        } catch (e) {
-            console.error(e);
-            alert("Failed to save rules");
-        }
-    };
-
-    const addNewRule = () => {
-        setEditedRules([...editedRules, { id: null, fabric_width_inches: '', length_required: 0, unit: 'meters' }]);
-    };
-
-    return (
-        <div style={{ border: '1px solid #ddd', padding: '0.5rem', borderRadius: '4px', background: '#f9f9f9', minWidth: '150px' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '0.5rem' }}>
-                <strong>{size.label}</strong>
-                <button 
-                    className="btn" 
-                    style={{ fontSize: '0.7rem', padding: '0.1rem 0.3rem' }} 
-                    onClick={handleEditToggle}
-                >
-                    {isEditing ? 'Cancel' : 'Edit'}
-                </button>
-             </div>
-             
-             {isEditing ? (
-                 <div style={{ fontSize: '0.85rem' }}>
-                     {editedRules.map((r, idx) => (
-                         <div key={idx} style={{ marginBottom: '0.5rem', borderBottom: '1px dotted #ccc', paddingBottom: '0.2rem' }}>
-                             <div className="flex gap-1 items-center">
-                                <label style={{fontSize: '0.7rem'}}>Width("):</label>
+        {editedProduct?.sizes?.length === 0 ? (
+          <div className="empty-state" style={{ height: '200px' }}>
+            <p>No sizes defined for this product.</p>
+          </div>
+        ) : (
+          <table className="rules-table">
+            <thead>
+              <tr>
+                <th style={{ width: '100px' }}>Size</th>
+                <th>Material Rules</th>
+                {isEditing && <th style={{ width: '80px' }}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {editedProduct?.sizes.map((size, sizeIdx) => (
+                <tr key={size.id} className="rule-row">
+                  <td style={{ fontWeight: '600' }}>{size.label}</td>
+                  <td>
+                    <div className="flex flex-col gap-2">
+                      {size.material_rules?.map((rule, ruleIdx) => (
+                        <div key={rule.id || ruleIdx} className="flex gap-2 items-center">
+                          {isEditing ? (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Width:</span>
                                 <input 
-                                    className="input" 
-                                    type="number" 
-                                    style={{ width: '40px', padding: '1px' }} 
-                                    value={r.fabric_width_inches || ''} 
-                                    placeholder="Any"
-                                    onChange={e => handleRuleChange(idx, 'fabric_width_inches', e.target.value)}
+                                  className="input" 
+                                  type="number" 
+                                  style={{ width: '70px', height: '32px' }} 
+                                  placeholder="Any"
+                                  value={rule.fabric_width_inches || ''}
+                                  onChange={e => handleRuleChange(sizeIdx, ruleIdx, 'fabric_width_inches', e.target.value)}
                                 />
-                             </div>
-                             <div className="flex gap-1 items-center mt-1">
-                                <label style={{fontSize: '0.7rem'}}>Len:</label>
+                                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>"</span>
+                              </div>
+                              <div className="flex items-center gap-1" style={{ marginLeft: '1rem' }}>
+                                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Length:</span>
                                 <input 
-                                    className="input" 
-                                    type="number" 
-                                    step="0.1"
-                                    style={{ width: '50px', padding: '1px' }} 
-                                    value={r.length_required} 
-                                    onChange={e => handleRuleChange(idx, 'length_required', e.target.value)}
+                                  className="input" 
+                                  type="number" 
+                                  step="0.01"
+                                  style={{ width: '80px', height: '32px' }} 
+                                  value={rule.length_required}
+                                  onChange={e => handleRuleChange(sizeIdx, ruleIdx, 'length_required', e.target.value)}
                                 />
                                 <select 
-                                    style={{ border: '1px solid #ddd', borderRadius: '4px' }}
-                                    value={r.unit}
-                                    onChange={e => handleRuleChange(idx, 'unit', e.target.value)}
+                                  className="input"
+                                  style={{ width: '90px', height: '32px', padding: '0 0.5rem' }}
+                                  value={rule.unit}
+                                  onChange={e => handleRuleChange(sizeIdx, ruleIdx, 'unit', e.target.value)}
                                 >
-                                    <option value="meters">m</option>
-                                    <option value="yards">yd</option>
+                                  <option value="meters">meters</option>
+                                  <option value="yards">yards</option>
                                 </select>
-                             </div>
-                         </div>
-                     ))}
-                     <button className="btn" style={{ width: '100%', fontSize: '0.8rem', marginBottom: '0.5rem' }} onClick={addNewRule}>+ Rule</button>
-                     <button className="btn success" style={{ width: '100%', fontSize: '0.8rem' }} onClick={handleSave}>Save</button>
-                 </div>
-             ) : (
-                 <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                     {rules.length > 0 ? (
-                         rules.map((r, i) => (
-                             <div key={r.id || i}>
-                                 {r.fabric_width_inches ? `${r.fabric_width_inches}" Width: ` : 'Any Width: '} 
-                                 {r.length_required} {r.unit}
-                             </div>
-                         ))
-                     ) : (
-                         <div style={{ color: 'red' }}>No rules defined</div>
-                     )}
-                 </div>
-             )}
-        </div>
-    )
+                              </div>
+                              <button 
+                                className="btn-ghost" 
+                                style={{ color: 'var(--danger-color)' }}
+                                onClick={() => handleRemoveRule(sizeIdx, ruleIdx)}
+                              >
+                                Remove
+                              </button>
+                            </>
+                          ) : (
+                            <div className="badge primary">
+                              {rule.fabric_width_inches ? `${rule.fabric_width_inches}" Width: ` : 'Any Width: '}
+                              {rule.length_required} {rule.unit}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {isEditing && (
+                        <button 
+                          className="btn-ghost" 
+                          style={{ alignSelf: 'flex-start', fontSize: '0.75rem', padding: 0 }}
+                          onClick={() => handleAddRule(sizeIdx)}
+                        >
+                          + Add Rule
+                        </button>
+                      )}
+                      {!isEditing && size.material_rules?.length === 0 && (
+                        <span style={{ color: 'var(--danger-color)', fontSize: '0.875rem' }}>No rules</span>
+                      )}
+                    </div>
+                  </td>
+                  {isEditing && (
+                    <td></td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
 }

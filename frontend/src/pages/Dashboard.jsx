@@ -28,10 +28,10 @@ export default function Dashboard() {
       <h1 style={{ marginBottom: '2rem', color: '#333' }}>Dashboard Overview</h1>
       
       {/* Top Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '3rem' }}>
         <div className="card" style={{ padding: '1.5rem', borderLeft: '5px solid #ff4d4f', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
-          <h3 style={{ color: '#666', fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Pending Orders</h3>
-          <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ff4d4f' }}>{stats.pending_orders}</p>
+          <h3 style={{ color: '#666', fontSize: '0.9rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Active Orders</h3>
+          <p style={{ fontSize: '2.5rem', fontWeight: 'bold', margin: 0, color: '#ff4d4f' }}>{stats.active_orders}</p>
         </div>
         
         <div className="card" style={{ padding: '1.5rem', borderLeft: '5px solid #52c41a', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>

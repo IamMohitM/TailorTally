@@ -1,0 +1,561 @@
+Product Name,Category,Size Label,Size Order Index,Fabric Width (Inches),Length Required,Unit
+Blazer,General,24,0,36,1.5,meters
+Blazer,General,24,0,60,1.0,meters
+Blazer,General,26,1,36,1.6,meters
+Blazer,General,26,1,60,1.05,meters
+Blazer,General,28,2,36,1.7,meters
+Blazer,General,28,2,60,1.1,meters
+Blazer,General,30,3,36,1.8,meters
+Blazer,General,30,3,60,1.15,meters
+Blazer,General,32,4,36,1.9,meters
+Blazer,General,32,4,60,1.2,meters
+Blazer,General,34,5,36,2.0,meters
+Blazer,General,34,5,60,1.25,meters
+Blazer,General,36,6,36,2.1,meters
+Blazer,General,36,6,60,1.3,meters
+Blazer,General,38,7,36,2.2,meters
+Blazer,General,38,7,60,1.35,meters
+Blazer,General,40,8,36,2.3,meters
+Blazer,General,40,8,60,1.4,meters
+Blazer,General,42,9,36,2.4,meters
+Blazer,General,42,9,60,1.45,meters
+Blazer,General,44,10,36,2.5,meters
+Blazer,General,44,10,60,1.5,meters
+Body Frock,General,20,0,36,1.5,meters
+Body Frock,General,20,0,60,1.0,meters
+Body Frock,General,22,1,36,1.6,meters
+Body Frock,General,22,1,60,1.05,meters
+Body Frock,General,24,2,36,1.7,meters
+Body Frock,General,24,2,60,1.1,meters
+Body Frock,General,26,3,36,1.8,meters
+Body Frock,General,26,3,60,1.15,meters
+Body Frock,General,28,4,36,1.9,meters
+Body Frock,General,28,4,60,1.2,meters
+Body Frock,General,30,5,36,2.0,meters
+Body Frock,General,30,5,60,1.25,meters
+Body Frock,General,32,6,36,2.1,meters
+Body Frock,General,32,6,60,1.3,meters
+Body Frock,General,34,7,36,2.2,meters
+Body Frock,General,34,7,60,1.35,meters
+Box Model Neckar,General,11,0,36,1.5,meters
+Box Model Neckar,General,11,0,60,1.0,meters
+Box Model Neckar,General,12,1,36,1.6,meters
+Box Model Neckar,General,12,1,60,1.05,meters
+Box Model Neckar,General,13,2,36,1.7,meters
+Box Model Neckar,General,13,2,60,1.1,meters
+Box Model Neckar,General,14,3,36,1.8,meters
+Box Model Neckar,General,14,3,60,1.15,meters
+Box Model Neckar,General,15,4,36,1.9,meters
+Box Model Neckar,General,15,4,60,1.2,meters
+Box Model Neckar,General,16,5,36,2.0,meters
+Box Model Neckar,General,16,5,60,1.25,meters
+Box Model Neckar,General,17,6,36,2.1,meters
+Box Model Neckar,General,17,6,60,1.3,meters
+Box Model Neckar,General,18,7,36,2.2,meters
+Box Model Neckar,General,18,7,60,1.35,meters
+Box Model Skirt,General,16,0,36,1.5,meters
+Box Model Skirt,General,16,0,60,1.0,meters
+Box Model Skirt,General,17,1,36,1.6,meters
+Box Model Skirt,General,17,1,60,1.05,meters
+Box Model Skirt,General,18,2,36,1.7,meters
+Box Model Skirt,General,18,2,60,1.1,meters
+Box Model Skirt,General,20,3,36,1.8,meters
+Box Model Skirt,General,20,3,60,1.15,meters
+Box Model Skirt,General,22,4,36,1.9,meters
+Box Model Skirt,General,22,4,60,1.2,meters
+Box Model Skirt,General,24,5,36,2.0,meters
+Box Model Skirt,General,24,5,60,1.25,meters
+Box Model Skirt,General,26,6,36,2.1,meters
+Box Model Skirt,General,26,6,60,1.3,meters
+Full Shirt,General,22,0,36,1.5,meters
+Full Shirt,General,22,0,60,1.0,meters
+Full Shirt,General,24,1,36,1.6,meters
+Full Shirt,General,24,1,60,1.05,meters
+Full Shirt,General,26,2,36,1.7,meters
+Full Shirt,General,26,2,60,1.1,meters
+Full Shirt,General,28,3,36,1.8,meters
+Full Shirt,General,28,3,60,1.15,meters
+Full Shirt,General,30,4,36,1.9,meters
+Full Shirt,General,30,4,60,1.2,meters
+Full Shirt,General,32,5,36,2.0,meters
+Full Shirt,General,32,5,60,1.25,meters
+Full Shirt,General,34,6,36,2.1,meters
+Full Shirt,General,34,6,60,1.3,meters
+Full Shirt,General,36,7,36,2.2,meters
+Full Shirt,General,36,7,60,1.35,meters
+Full Shirt,General,38,8,36,2.3,meters
+Full Shirt,General,38,8,60,1.4,meters
+Full Shirt,General,40,9,36,2.4,meters
+Full Shirt,General,40,9,60,1.45,meters
+Full Shirt,General,42,10,36,2.5,meters
+Full Shirt,General,42,10,60,1.5,meters
+Full Shirt,General,44,11,36,2.6,meters
+Full Shirt,General,44,11,60,1.55,meters
+Half Elastic Pant,General,18,0,36,1.5,meters
+Half Elastic Pant,General,18,0,60,1.0,meters
+Half Elastic Pant,General,20,1,36,1.6,meters
+Half Elastic Pant,General,20,1,60,1.05,meters
+Half Elastic Pant,General,22,2,36,1.7,meters
+Half Elastic Pant,General,22,2,60,1.1,meters
+Half Elastic Pant,General,24,3,36,1.8,meters
+Half Elastic Pant,General,24,3,60,1.15,meters
+Half Elastic Pant,General,26,4,36,1.9,meters
+Half Elastic Pant,General,26,4,60,1.2,meters
+Half Elastic Pant,General,28,5,36,2.0,meters
+Half Elastic Pant,General,28,5,60,1.25,meters
+Half Elastic Pant,General,30,6,36,2.1,meters
+Half Elastic Pant,General,30,6,60,1.3,meters
+Half Elastic Pant,General,32,7,36,2.2,meters
+Half Elastic Pant,General,32,7,60,1.35,meters
+Half Elastic Pant,General,34,8,36,2.3,meters
+Half Elastic Pant,General,34,8,60,1.4,meters
+Half Elastic Pant,General,36,9,36,2.4,meters
+Half Elastic Pant,General,36,9,60,1.45,meters
+Half Elastic Pant,General,38,10,36,2.5,meters
+Half Elastic Pant,General,38,10,60,1.5,meters
+Half Elastic Pant,General,40,11,36,2.6,meters
+Half Elastic Pant,General,40,11,60,1.55,meters
+Half Elastic Pant,General,42,12,36,2.7,meters
+Half Elastic Pant,General,42,12,60,1.6,meters
+Half Elastic Pant,General,44,13,36,2.8,meters
+Half Elastic Pant,General,44,13,60,1.65,meters
+Half Elastic Skirt,General,11,0,36,1.5,meters
+Half Elastic Skirt,General,11,0,60,1.0,meters
+Half Elastic Skirt,General,12,1,36,1.6,meters
+Half Elastic Skirt,General,12,1,60,1.05,meters
+Half Elastic Skirt,General,13,2,36,1.7,meters
+Half Elastic Skirt,General,13,2,60,1.1,meters
+Half Elastic Skirt,General,14,3,36,1.8,meters
+Half Elastic Skirt,General,14,3,60,1.15,meters
+Half Elastic Skirt,General,15,4,36,1.9,meters
+Half Elastic Skirt,General,15,4,60,1.2,meters
+Half Elastic Skirt,General,16,5,36,2.0,meters
+Half Elastic Skirt,General,16,5,60,1.25,meters
+Half Elastic Skirt,General,17,6,36,2.1,meters
+Half Elastic Skirt,General,17,6,60,1.3,meters
+Half Elastic Skirt,General,18,7,36,2.2,meters
+Half Elastic Skirt,General,18,7,60,1.35,meters
+Half Elastic Skirt,General,20,8,36,2.3,meters
+Half Elastic Skirt,General,20,8,60,1.4,meters
+Half Elastic Skirt,General,22,9,36,2.4,meters
+Half Elastic Skirt,General,22,9,60,1.45,meters
+Half Elastic Skirt,General,24,10,36,2.5,meters
+Half Elastic Skirt,General,24,10,60,1.5,meters
+Half Elastic Skirt,General,26,11,36,2.6,meters
+Half Elastic Skirt,General,26,11,60,1.55,meters
+Half Elastic Skirt,General,28,12,36,2.7,meters
+Half Elastic Skirt,General,28,12,60,1.6,meters
+Half Elastic Skirt,General,30,13,36,2.8,meters
+Half Elastic Skirt,General,30,13,60,1.65,meters
+Half Elastic Skirt,General,32,14,36,2.9000000000000004,meters
+Half Elastic Skirt,General,32,14,60,1.7000000000000002,meters
+Half Elastic Skirt,General,32 L / 26 W,15,36,3.0,meters
+Half Elastic Skirt,General,32 L / 26 W,15,60,1.75,meters
+Half Shirt,General,18,0,36,1.5,meters
+Half Shirt,General,18,0,60,1.0,meters
+Half Shirt,General,20,1,36,1.6,meters
+Half Shirt,General,20,1,60,1.05,meters
+Half Shirt,General,22,2,36,1.7,meters
+Half Shirt,General,22,2,60,1.1,meters
+Half Shirt,General,24,3,36,1.8,meters
+Half Shirt,General,24,3,60,1.15,meters
+Half Shirt,General,26,4,36,1.9,meters
+Half Shirt,General,26,4,60,1.2,meters
+Half Shirt,General,28,5,36,2.0,meters
+Half Shirt,General,28,5,60,1.25,meters
+Half Shirt,General,30,6,36,2.1,meters
+Half Shirt,General,30,6,60,1.3,meters
+Half Shirt,General,32,7,36,2.2,meters
+Half Shirt,General,32,7,60,1.35,meters
+Half Shirt,General,34,8,36,2.3,meters
+Half Shirt,General,34,8,60,1.4,meters
+Half Shirt,General,36,9,36,2.4,meters
+Half Shirt,General,36,9,60,1.45,meters
+Half Shirt,General,38,10,36,2.5,meters
+Half Shirt,General,38,10,60,1.5,meters
+Half Shirt,General,40,11,36,2.6,meters
+Half Shirt,General,40,11,60,1.55,meters
+Half Shirt,General,42,12,36,2.7,meters
+Half Shirt,General,42,12,60,1.6,meters
+Half Shirt,General,44,13,36,2.8,meters
+Half Shirt,General,44,13,60,1.65,meters
+Half Shirt Copy,General,18,0,36,1.5,meters
+Half Shirt Copy,General,18,0,60,1.0,meters
+Half Shirt Copy,General,20,1,36,1.6,meters
+Half Shirt Copy,General,20,1,60,1.05,meters
+Half Shirt Copy,General,22,2,36,1.7,meters
+Half Shirt Copy,General,22,2,60,1.1,meters
+Half Shirt Copy,General,24,3,36,1.8,meters
+Half Shirt Copy,General,24,3,60,1.15,meters
+Half Shirt Copy,General,26,4,36,1.9,meters
+Half Shirt Copy,General,26,4,60,1.2,meters
+Half Shirt Copy,General,28,5,36,2.0,meters
+Half Shirt Copy,General,28,5,60,1.25,meters
+Liberty Uniform Shoe,General,1,0,,0,pairs
+Liberty Uniform Shoe,General,2,1,,0,pairs
+Liberty Uniform Shoe,General,3,2,,0,pairs
+Liberty Uniform Shoe,General,8C,3,,0,pairs
+Liberty Uniform Shoe,General,9C,4,,0,pairs
+Liberty Uniform Shoe,General,10 C,5,,0,pairs
+Liberty Uniform Shoe,General,11 C,6,,0,pairs
+Liberty Uniform Shoe,General,12 C,7,,0,pairs
+Liberty Uniform Shoe,General,13 C,8,,0,pairs
+Neckar,General,11,0,36,1.5,meters
+Neckar,General,11,0,60,1.0,meters
+Neckar,General,12,1,36,1.6,meters
+Neckar,General,12,1,60,1.05,meters
+Neckar,General,13,2,36,1.7,meters
+Neckar,General,13,2,60,1.1,meters
+Neckar,General,14,3,36,1.8,meters
+Neckar,General,14,3,60,1.15,meters
+Neckar,General,15,4,36,1.9,meters
+Neckar,General,15,4,60,1.2,meters
+Neckar,General,16,5,36,2.0,meters
+Neckar,General,16,5,60,1.25,meters
+Neckar,General,17,6,36,2.1,meters
+Neckar,General,17,6,60,1.3,meters
+Neckar,General,18,7,36,2.2,meters
+Neckar,General,18,7,60,1.35,meters
+Pant,General,34 L / 26 W,0,36,1.5,meters
+Pant,General,34 L / 26 W,0,60,1.0,meters
+Pant,General,34 L / 28 W,1,36,1.6,meters
+Pant,General,34 L / 28 W,1,60,1.05,meters
+Pant,General,34 L / 30 W,2,36,1.7,meters
+Pant,General,34 L / 30 W,2,60,1.1,meters
+Pant,General,34 L / 32 W,3,36,1.8,meters
+Pant,General,34 L / 32 W,3,60,1.15,meters
+Pant,General,36 L / 26 W,4,36,1.9,meters
+Pant,General,36 L / 26 W,4,60,1.2,meters
+Pant,General,36 L / 28 W,5,36,2.0,meters
+Pant,General,36 L / 28 W,5,60,1.25,meters
+Pant,General,36 L / 30 W,6,36,2.1,meters
+Pant,General,36 L / 30 W,6,60,1.3,meters
+Pant,General,36 L / 32 W,7,36,2.2,meters
+Pant,General,36 L / 32 W,7,60,1.35,meters
+Pant,General,36 L / 34 W,8,36,2.3,meters
+Pant,General,36 L / 34 W,8,60,1.4,meters
+Pant,General,38 L / 26 W,9,36,2.4,meters
+Pant,General,38 L / 26 W,9,60,1.45,meters
+Pant,General,38 L / 28 W,10,36,2.5,meters
+Pant,General,38 L / 28 W,10,60,1.5,meters
+Pant,General,38 L / 30 W,11,36,2.6,meters
+Pant,General,38 L / 30 W,11,60,1.55,meters
+Pant,General,38 L / 32 W,12,36,2.7,meters
+Pant,General,38 L / 32 W,12,60,1.6,meters
+Pant,General,38 L / 34 W,13,36,2.8,meters
+Pant,General,38 L / 34 W,13,60,1.65,meters
+Pant,General,38 L / 36 W,14,36,2.9000000000000004,meters
+Pant,General,38 L / 36 W,14,60,1.7000000000000002,meters
+Pant,General,40 L / 28 W,15,36,3.0,meters
+Pant,General,40 L / 28 W,15,60,1.75,meters
+Pant,General,40 L / 30 W,16,36,3.1,meters
+Pant,General,40 L / 30 W,16,60,1.8,meters
+Pant,General,40 L / 32 W,17,36,3.2,meters
+Pant,General,40 L / 32 W,17,60,1.85,meters
+Pant,General,40 L / 34 W,18,36,3.3,meters
+Pant,General,40 L / 34 W,18,60,1.9,meters
+Pant,General,40 L / 36 W,19,36,3.4000000000000004,meters
+Pant,General,40 L / 36 W,19,60,1.9500000000000002,meters
+Pant,General,40 L / 38 W,20,36,3.5,meters
+Pant,General,40 L / 38 W,20,60,2.0,meters
+Pant,General,42 L / 26 W,21,36,3.6,meters
+Pant,General,42 L / 26 W,21,60,2.05,meters
+Pant,General,42 L / 28 W,22,36,3.7,meters
+Pant,General,42 L / 28 W,22,60,2.1,meters
+Pant,General,42 L / 30 W,23,36,3.8000000000000003,meters
+Pant,General,42 L / 30 W,23,60,2.1500000000000004,meters
+Pant,General,42 L / 32 W,24,36,3.9000000000000004,meters
+Pant,General,42 L / 32 W,24,60,2.2,meters
+Pant,General,42 L / 34 W,25,36,4.0,meters
+Pant,General,42 L / 34 W,25,60,2.25,meters
+Pant,General,42 L / 36 W,26,36,4.1,meters
+Pant,General,42 L / 36 W,26,60,2.3,meters
+Pant,General,42 L / 38 W,27,36,4.2,meters
+Pant,General,42 L / 38 W,27,60,2.35,meters
+Pant,General,42 L / 40 W,28,36,4.300000000000001,meters
+Pant,General,42 L / 40 W,28,60,2.4000000000000004,meters
+Pre Primary Shoe,General,1,0,,0,pairs
+Pre Primary Shoe,General,2,1,,0,pairs
+Pre Primary Shoe,General,3,2,,0,pairs
+Pre Primary Shoe,General,4,3,,0,pairs
+Pre Primary Shoe,General,8C,4,,0,pairs
+Pre Primary Shoe,General,9C,5,,0,pairs
+Pre Primary Shoe,General,10C,6,,0,pairs
+Pre Primary Shoe,General,11C,7,,0,pairs
+Pre Primary Shoe,General,12C,8,,0,pairs
+Pre Primary Shoe,General,13C,9,,0,pairs
+Preprimary Shoe Liberty,General,1,0,,0,pairs
+Preprimary Shoe Liberty,General,2,1,,0,pairs
+Preprimary Shoe Liberty,General,3,2,,0,pairs
+Preprimary Shoe Liberty,General,8C,3,,0,pairs
+Preprimary Shoe Liberty,General,9C,4,,0,pairs
+Preprimary Shoe Liberty,General,10C,5,,0,pairs
+Preprimary Shoe Liberty,General,11C,6,,0,pairs
+Preprimary Shoe Liberty,General,12C,7,,0,pairs
+Preprimary Shoe Liberty,General,13C,8,,0,pairs
+Preprimary Shoe Liberty,General,4,9,,0,pairs
+Preprimary Skirt,General,16,0,36,1.5,meters
+Preprimary Skirt,General,16,0,60,1.0,meters
+Preprimary Skirt,General,18,1,36,1.6,meters
+Preprimary Skirt,General,18,1,60,1.05,meters
+Preprimary Skirt,General,20,2,36,1.7,meters
+Preprimary Skirt,General,20,2,60,1.1,meters
+Preprimary Skirt,General,22,3,36,1.8,meters
+Preprimary Skirt,General,22,3,60,1.15,meters
+Preprimary Skirt,General,24,4,36,1.9,meters
+Preprimary Skirt,General,24,4,60,1.2,meters
+Punjabi Dress,General,24,0,36,1.5,meters
+Punjabi Dress,General,24,0,60,1.0,meters
+Punjabi Dress,General,26,1,36,1.6,meters
+Punjabi Dress,General,26,1,60,1.05,meters
+Punjabi Dress,General,28,2,36,1.7,meters
+Punjabi Dress,General,28,2,60,1.1,meters
+Punjabi Dress,General,30,3,36,1.8,meters
+Punjabi Dress,General,30,3,60,1.15,meters
+Punjabi Dress,General,32,4,36,1.9,meters
+Punjabi Dress,General,32,4,60,1.2,meters
+Punjabi Dress,General,34,5,36,2.0,meters
+Punjabi Dress,General,34,5,60,1.25,meters
+Punjabi Dress,General,36,6,36,2.1,meters
+Punjabi Dress,General,36,6,60,1.3,meters
+Punjabi Dress,General,38,7,36,2.2,meters
+Punjabi Dress,General,38,7,60,1.35,meters
+Punjabi Dress,General,40,8,36,2.3,meters
+Punjabi Dress,General,40,8,60,1.4,meters
+Skirt,General,20,0,36,1.5,meters
+Skirt,General,20,0,60,1.0,meters
+Skirt,General,22,1,36,1.6,meters
+Skirt,General,22,1,60,1.05,meters
+Skirt,General,24,2,36,1.7,meters
+Skirt,General,24,2,60,1.1,meters
+Skirt,General,26,3,36,1.8,meters
+Skirt,General,26,3,60,1.15,meters
+Skirt,General,28 L / 26 W,4,36,1.9,meters
+Skirt,General,28 L / 26 W,4,60,1.2,meters
+Skirt,General,28 L / 28 W,5,36,2.0,meters
+Skirt,General,28 L / 28 W,5,60,1.25,meters
+Skirt,General,28 L / 30 W,6,36,2.1,meters
+Skirt,General,28 L / 30 W,6,60,1.3,meters
+Skirt,General,28 L / 32 W,7,36,2.2,meters
+Skirt,General,28 L / 32 W,7,60,1.35,meters
+Skirt,General,30 L / 26 W,8,36,2.3,meters
+Skirt,General,30 L / 26 W,8,60,1.4,meters
+Skirt,General,30 L / 28 W,9,36,2.4,meters
+Skirt,General,30 L / 28 W,9,60,1.45,meters
+Skirt,General,30 L / 30 W,10,36,2.5,meters
+Skirt,General,30 L / 30 W,10,60,1.5,meters
+Skirt,General,30 L / 32 W,11,36,2.6,meters
+Skirt,General,30 L / 32 W,11,60,1.55,meters
+Skirt,General,30 L / 34 W,12,36,2.7,meters
+Skirt,General,30 L / 34 W,12,60,1.6,meters
+Skirt,General,30 L / 36 W,13,36,2.8,meters
+Skirt,General,30 L / 36 W,13,60,1.65,meters
+Skirt,General,32 L / 26 W,14,36,2.9000000000000004,meters
+Skirt,General,32 L / 26 W,14,60,1.7000000000000002,meters
+Skirt,General,32 L / 28 W,15,36,3.0,meters
+Skirt,General,32 L / 28 W,15,60,1.75,meters
+Skirt,General,32 L / 30 W,16,36,3.1,meters
+Skirt,General,32 L / 30 W,16,60,1.8,meters
+Skirt,General,32 L / 32 W,17,36,3.2,meters
+Skirt,General,32 L / 32 W,17,60,1.85,meters
+Skirt,General,32 L / 34 W,18,36,3.3,meters
+Skirt,General,32 L / 34 W,18,60,1.9,meters
+Skirt,General,32 L / 36 W,19,36,3.4000000000000004,meters
+Skirt,General,32 L / 36 W,19,60,1.9500000000000002,meters
+Skirt,General,32 L / 38 W,20,36,3.5,meters
+Skirt,General,32 L / 38 W,20,60,2.0,meters
+Skirt,General,32 L / 40 W,21,36,3.6,meters
+Skirt,General,32 L / 40 W,21,60,2.05,meters
+Skirt,General,32 L / 42 W,22,36,3.7,meters
+Skirt,General,32 L / 42 W,22,60,2.1,meters
+Skirt,General,34 L / 26 W,23,36,3.8000000000000003,meters
+Skirt,General,34 L / 26 W,23,60,2.1500000000000004,meters
+Skirt,General,34 L / 28 W,24,36,3.9000000000000004,meters
+Skirt,General,34 L / 28 W,24,60,2.2,meters
+Skirt,General,34 L / 30 W,25,36,4.0,meters
+Skirt,General,34 L / 30 W,25,60,2.25,meters
+Skirt,General,34 L / 32 W,26,36,4.1,meters
+Skirt,General,34 L / 32 W,26,60,2.3,meters
+Skirt,General,34 L / 34 W,27,36,4.2,meters
+Skirt,General,34 L / 34 W,27,60,2.35,meters
+Skirt,General,36 L / 26 W,28,36,4.300000000000001,meters
+Skirt,General,36 L / 26 W,28,60,2.4000000000000004,meters
+Skirt,General,36 L / 28 W,29,36,4.4,meters
+Skirt,General,36 L / 28 W,29,60,2.45,meters
+Skirt,General,36 L / 30 W,30,36,4.5,meters
+Skirt,General,36 L / 30 W,30,60,2.5,meters
+Skirt,General,36 L / 32 W,31,36,4.6,meters
+Skirt,General,36 L / 32 W,31,60,2.55,meters
+Skirt,General,36 L / 34 W,32,36,4.7,meters
+Skirt,General,36 L / 34 W,32,60,2.6,meters
+Skirt,General,38 L / 26 W,33,36,4.800000000000001,meters
+Skirt,General,38 L / 26 W,33,60,2.6500000000000004,meters
+Skirt,General,38 L / 28 W,34,36,4.9,meters
+Skirt,General,38 L / 28 W,34,60,2.7,meters
+Skirt,General,38 L / 30 W,35,36,5.0,meters
+Skirt,General,38 L / 30 W,35,60,2.75,meters
+Skirt,General,38 L / 32 W,36,36,5.1,meters
+Skirt,General,38 L / 32 W,36,60,2.8,meters
+Skirt,General,38 L / 34 W,37,36,5.2,meters
+Skirt,General,38 L / 34 W,37,60,2.85,meters
+Skirt,General,38 L / 36 W,38,36,5.300000000000001,meters
+Skirt,General,38 L / 36 W,38,60,2.9000000000000004,meters
+Skirt,General,40 L / 26 W,39,36,5.4,meters
+Skirt,General,40 L / 26 W,39,60,2.95,meters
+Skirt,General,40 L / 28 W,40,36,5.5,meters
+Skirt,General,40 L / 28 W,40,60,3.0,meters
+Skirt,General,40 L / 30 W,41,36,5.6000000000000005,meters
+Skirt,General,40 L / 30 W,41,60,3.0500000000000003,meters
+Skirt,General,40 L / 32 W,42,36,5.7,meters
+Skirt,General,40 L / 32 W,42,60,3.1,meters
+Skirt,General,40 L / 34 W,43,36,5.8,meters
+Skirt,General,40 L / 34 W,43,60,3.15,meters
+Skirt,General,40 L / 36 W,44,36,5.9,meters
+Skirt,General,40 L / 36 W,44,60,3.2,meters
+Skirt,General,42 L / 26 W,45,36,6.0,meters
+Skirt,General,42 L / 26 W,45,60,3.25,meters
+Skirt,General,42 L / 28 W,46,36,6.1000000000000005,meters
+Skirt,General,42 L / 28 W,46,60,3.3000000000000003,meters
+Skirt,General,42 L / 30 W,47,36,6.2,meters
+Skirt,General,42 L / 30 W,47,60,3.35,meters
+Skirt,General,42 L / 32 W,48,36,6.300000000000001,meters
+Skirt,General,42 L / 32 W,48,60,3.4000000000000004,meters
+Skirt,General,42 L / 34 W,49,36,6.4,meters
+Skirt,General,42 L / 34 W,49,60,3.45,meters
+Skirt,General,42 L / 36 W,50,36,6.5,meters
+Skirt,General,42 L / 36 W,50,60,3.5,meters
+Skirt,General,42 L / 38 W,51,36,6.6000000000000005,meters
+Skirt,General,42 L / 38 W,51,60,3.5500000000000003,meters
+Skirt,General,42 L / 40 W,52,36,6.7,meters
+Skirt,General,42 L / 40 W,52,60,3.6,meters
+Sport Shoe Liberty,General,1,0,,0,pairs
+Sport Shoe Liberty,General,2,1,,0,pairs
+Sport Shoe Liberty,General,3,2,,0,pairs
+Sport Shoe Liberty,General,4,3,,0,pairs
+Sport Shoe Liberty,General,5,4,,0,pairs
+Sport Shoe Liberty,General,6,5,,0,pairs
+Sport Shoe Liberty,General,7,6,,0,pairs
+Sport Shoe Liberty,General,8,7,,0,pairs
+Sport Shoe Liberty,General,9,8,,0,pairs
+Sport Shoe Liberty,General,10,9,,0,pairs
+Sport Shoe Liberty,General,13 C,10,,0,pairs
+Sports Lower,General,18,0,,200,grams
+Sports Lower,General,20,1,,210,grams
+Sports Lower,General,22,2,,220,grams
+Sports Lower,General,24,3,,230,grams
+Sports Lower,General,26,4,,240,grams
+Sports Lower,General,28,5,,250,grams
+Sports Lower,General,30,6,,260,grams
+Sports Lower,General,32,7,,270,grams
+Sports Lower,General,34,8,,280,grams
+Sports Lower,General,36,9,,290,grams
+Sports Lower,General,38,10,,300,grams
+Sports Lower,General,40,11,,310,grams
+Sports Lower,General,42,12,,320,grams
+Sports Lower,General,44,13,,330,grams
+Sports Lower Girls,General,18,0,,200,grams
+Sports Lower Girls,General,20,1,,210,grams
+Sports Lower Girls,General,22,2,,220,grams
+Sports Lower Girls,General,24,3,,230,grams
+Sports Lower Girls,General,26,4,,240,grams
+Sports Lower Girls,General,28,5,,250,grams
+Sports Lower Girls,General,30,6,,260,grams
+Sports Lower Girls,General,32,7,,270,grams
+Sports Lower Girls,General,34,8,,280,grams
+Sports Lower Girls,General,36,9,,290,grams
+Sports Lower Girls,General,38,10,,300,grams
+Sports Lower Girls,General,40,11,,310,grams
+Sports Lower Girls,General,42,12,,320,grams
+Sports Lower Girls,General,44,13,,330,grams
+Sports T Shirt,General,18,0,,200,grams
+Sports T Shirt,General,20,1,,210,grams
+Sports T Shirt,General,22,2,,220,grams
+Sports T Shirt,General,24,3,,230,grams
+Sports T Shirt,General,26,4,,240,grams
+Sports T Shirt,General,28,5,,250,grams
+Sports T Shirt,General,30,6,,260,grams
+Sports T Shirt,General,32,7,,270,grams
+Sports T Shirt,General,34,8,,280,grams
+Sports T Shirt,General,36,9,,290,grams
+Sports T Shirt,General,38,10,,300,grams
+Sports T Shirt,General,40,11,,310,grams
+Sports T Shirt,General,42,12,,320,grams
+Sports T Shirt,General,44,13,,330,grams
+Sports T Shirt Full Girls,General,20,0,,200,grams
+Sports T Shirt Full Girls,General,22,1,,210,grams
+Sports T Shirt Full Girls,General,24,2,,220,grams
+Sports T Shirt Full Girls,General,26,3,,230,grams
+Sports T Shirt Full Girls,General,28,4,,240,grams
+Sports T Shirt Full Girls,General,30,5,,250,grams
+Sports T Shirt Full Girls,General,32,6,,260,grams
+Sports T Shirt Full Girls,General,34,7,,270,grams
+Sports T Shirt Full Girls,General,36,8,,280,grams
+Sports T Shirt Full Girls,General,38,9,,290,grams
+Sports T Shirt Full Girls,General,40,10,,300,grams
+Sports T Shirt Full Girls,General,42,11,,310,grams
+Sports T Shirt Girls,General,18,0,,200,grams
+Sports T Shirt Girls,General,20,1,,210,grams
+Sports T Shirt Girls,General,22,2,,220,grams
+Sports T Shirt Girls,General,24,3,,230,grams
+Sports T Shirt Girls,General,26,4,,240,grams
+Sports T Shirt Girls,General,28,5,,250,grams
+Sports T Shirt Girls,General,30,6,,260,grams
+Sports T Shirt Girls,General,32,7,,270,grams
+Sports T Shirt Girls,General,34,8,,280,grams
+Sports T Shirt Girls,General,36,9,,290,grams
+Sports T Shirt Girls,General,38,10,,300,grams
+Sports T Shirt Girls,General,40,11,,310,grams
+Sports T Shirt Girls,General,42,12,,320,grams
+Sports T Shirt Girls,General,44,13,,330,grams
+Uniform T Shirt,General,18,0,36,1.5,meters
+Uniform T Shirt,General,18,0,60,1.0,meters
+Uniform T Shirt,General,20,1,36,1.6,meters
+Uniform T Shirt,General,20,1,60,1.05,meters
+Uniform T Shirt,General,22,2,36,1.7,meters
+Uniform T Shirt,General,22,2,60,1.1,meters
+Uniform T Shirt,General,24,3,36,1.8,meters
+Uniform T Shirt,General,24,3,60,1.15,meters
+Uniform T Shirt,General,26,4,36,1.9,meters
+Uniform T Shirt,General,26,4,60,1.2,meters
+Uniform T Shirt,General,28,5,36,2.0,meters
+Uniform T Shirt,General,28,5,60,1.25,meters
+Uniform T Shirt,General,30,6,36,2.1,meters
+Uniform T Shirt,General,30,6,60,1.3,meters
+Uniform T Shirt,General,32,7,36,2.2,meters
+Uniform T Shirt,General,32,7,60,1.35,meters
+Uniform T Shirt,General,34,8,36,2.3,meters
+Uniform T Shirt,General,34,8,60,1.4,meters
+Uniform T Shirt,General,36,9,36,2.4,meters
+Uniform T Shirt,General,36,9,60,1.45,meters
+Uniform T Shirt,General,38,10,36,2.5,meters
+Uniform T Shirt,General,38,10,60,1.5,meters
+Uniform T Shirt,General,40,11,36,2.6,meters
+Uniform T Shirt,General,40,11,60,1.55,meters
+Uniform T Shirt,General,42,12,36,2.7,meters
+Uniform T Shirt,General,42,12,60,1.6,meters
+Waist Coat,General,20,0,36,1.5,meters
+Waist Coat,General,20,0,60,1.0,meters
+Waist Coat,General,22,1,36,1.6,meters
+Waist Coat,General,22,1,60,1.05,meters
+Waist Coat,General,24,2,36,1.7,meters
+Waist Coat,General,24,2,60,1.1,meters
+Waist Coat,General,26,3,36,1.8,meters
+Waist Coat,General,26,3,60,1.15,meters
+Waist Coat,General,28,4,36,1.9,meters
+Waist Coat,General,28,4,60,1.2,meters
+Waist Coat,General,30,5,36,2.0,meters
+Waist Coat,General,30,5,60,1.25,meters
+Waist Coat,General,32,6,36,2.1,meters
+Waist Coat,General,32,6,60,1.3,meters
+Waist Coat,General,34,7,36,2.2,meters
+Waist Coat,General,34,7,60,1.35,meters
+Waist Coat,General,36,8,36,2.3,meters
+Waist Coat,General,36,8,60,1.4,meters
+Waist Coat,General,38,9,36,2.4,meters
+Waist Coat,General,38,9,60,1.45,meters
+Waist Coat,General,40,10,36,2.5,meters
+Waist Coat,General,40,10,60,1.5,meters
+Waist Coat,General,42,11,36,2.6,meters
+Waist Coat,General,42,11,60,1.55,meters
+Waist Coat,General,44,12,36,2.7,meters
+Waist Coat,General,44,12,60,1.6,meters

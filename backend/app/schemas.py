@@ -155,7 +155,7 @@ class TailorStat(BaseModel):
     order_count: int
 
 class DashboardStats(BaseModel):
-    pending_orders: int
+    active_orders: int
     material_issued: float
     material_work_done: float
     material_work_pending: float

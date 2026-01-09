@@ -3,6 +3,8 @@ from sqlalchemy.orm import Session
 from typing import List
 from .. import models, schemas
 from ..database import get_db
+from fastapi import UploadFile, File
+from ..utils.import_utils import process_master_data_file
 
 router = APIRouter(
     prefix="/master-data",
@@ -36,6 +38,25 @@ def update_product(product_id: int, product: schemas.ProductCreate, db: Session 
     db.commit()
     db.refresh(db_product)
     return db_product
+
+@router.delete("/products/{product_id}")
+def delete_product(product_id: int, db: Session = Depends(get_db)):
+    db_product = db.query(models.Product).filter(models.Product.id == product_id).first()
+    if not db_product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    try:
+        db.delete(db_product)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        # Check for integrity error (foreign key constraint)
+        # Note: Exception type might vary based on DB driver, but generic catch is safe for now to prevent crash
+        if "integrity" in str(e).lower() or "constraint" in str(e).lower():
+             raise HTTPException(status_code=400, detail="Cannot delete product because it is used in existing orders.")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"message": "Product deleted successfully"}
 
 
 # --- Sizes ---
@@ -122,6 +143,16 @@ def update_tailor(tailor_id: int, tailor: schemas.TailorCreate, db: Session = De
     for key, value in tailor.dict().items():
         setattr(db_tailor, key, value)
     
-    db.commit()
     db.refresh(db_tailor)
     return db_tailor
+
+@router.post("/upload")
+async def upload_master_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    try:
+        # Pass the file-like object directly to the utility
+        stats = process_master_data_file(file.file, db, file.filename)
+        return {"message": "Import successful", "stats": stats}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

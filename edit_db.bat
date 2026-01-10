@@ -13,7 +13,7 @@ if exist venv\Scripts\activate.bat (
     echo Your browser should open automatically.
     echo Press Ctrl+C in this window to stop the editor.
     
-    sqlite_web tailor_tally.db --open
+    python scripts/edit_db.py
     
     deactivate
 ) else (

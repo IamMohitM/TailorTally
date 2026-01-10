@@ -41,5 +41,11 @@ start "Backend" cmd /k "cd backend && venv\Scripts\activate.bat && uvicorn app.m
 
 start "Frontend" cmd /k "cd frontend && npm run dev"
 
-echo APP IS STARTING
+echo Waiting for services to start...
+timeout /t 5
+
+echo Opening browser...
+start http://localhost:5173
+
+echo APP IS RUNNING
 pause

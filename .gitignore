@@ -33,3 +33,6 @@ yarn-error.log*
 
 # Docker
 .docker/
+
+# Database View
+db_view.html

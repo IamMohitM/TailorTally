@@ -187,7 +187,8 @@ th {
 }
 
 /* Items Center */
-align-items: center;
+.items-center {
+  align-items: center;
 }
 
 .justify-between {

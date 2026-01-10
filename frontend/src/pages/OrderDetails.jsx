@@ -42,7 +42,6 @@ export default function OrderDetails() {
         </div>
         <div className="flex gap-2">
             <button className="btn" onClick={handlePrint}>Print / Save PDF</button>
-            <Link to="/" className="btn" style={{background: '#6b7280'}}>Back to List</Link>
         </div>
       </div>
 

@@ -75,6 +75,7 @@ export default function OrderList() {
       setDeletePassword("");
   }
 
+  async function performDeleteOrder() {
       if (!deletePassword) {
             showToast("Please enter admin password", "error");
             return;

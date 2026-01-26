@@ -48,10 +48,10 @@ export default function CreateOrder() {
   }
 
   const handleCreateTailor = async (name) => {
-      const email = window.prompt(`Enter email for ${name} (optional):`);
+      // Removed prompt for email. Created with name only.
       try {
           const body = { name };
-          if (email) body.email = email;
+          // email is optional and can be filled in the input later
 
           const newTailor = await fetchAPI('/master-data/tailors', {
               method: 'POST',
@@ -59,7 +59,6 @@ export default function CreateOrder() {
           });
           setTailors([...tailors, newTailor]);
           setSelectedTailor(newTailor.id);
-          // Email sync effect will handle setting email state, but we can optimise
       } catch (e) {
           alert("Failed to create tailor: " + e.message);
       }
@@ -170,6 +169,13 @@ export default function CreateOrder() {
       }
   };
 
+  const focusField = (id) => {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.focus();
+      }, 0);
+  }
+
   return (
     <div>
       <h1>Create New Order</h1>
@@ -179,32 +185,50 @@ export default function CreateOrder() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Tailor</label>
                 <Combobox 
+                    id="tailor-select"
                     options={tailors}
                     value={selectedTailor}
                     onChange={setSelectedTailor}
                     onCreate={handleCreateTailor}
                     placeholder="Search/create tailor..."
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') focusField('tailor-email');
+                    }}
                 />
               </div>
               
               <div className="form-group" style={{ marginBottom: 0 }}>
                  <label>Tailor Email</label>
                  <input 
+                    id="tailor-email"
                     type="email" 
                     className="input" 
                     value={tailorEmail} 
                     onChange={e => setTailorEmail(e.target.value)}
                     placeholder="Enter email..."
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusField('order-date');
+                        }
+                    }}
                  />
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Date</label>
                 <input 
+                    id="order-date"
                     type="date" 
                     className="input" 
                     value={orderDate} 
                     onChange={e => setOrderDate(e.target.value)} 
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusField('order-notes');
+                        }
+                    }}
                 />
               </div>
           </div>
@@ -212,11 +236,20 @@ export default function CreateOrder() {
           <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
               <label>Notes</label>
               <textarea 
+                id="order-notes"
                 className="input" 
                 value={notes} 
                 onChange={e => setNotes(e.target.value)} 
                 rows="1"
                 style={{ resize: 'vertical', minHeight: '38px' }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (productEntries.length > 0) {
+                            focusField(`product-select-0`);
+                        }
+                    }
+                }}
               />
           </div>
       </div>
@@ -291,16 +324,33 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
         onUpdate('selections', newSelections);
     };
 
+    // Calculate total meters for this entry
+    const totalMeters = Object.values(entry.selections).reduce((acc, curr) => acc + (curr.totalMaterial || 0), 0);
+
+    const focusField = (id) => {
+        setTimeout(() => {
+            const el = document.getElementById(id);
+            if (el) el.focus();
+        }, 0);
+    };
+
     return (
         <div className="card" style={{ background: '#fafafa', marginBottom: '0.75rem', padding: '0.75rem' }}>
             <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
                 <div className="flex gap-4 flex-1">
                     <div className="form-group flex-1" style={{ marginBottom: 0 }}>
                         <select 
+                            id={`product-select-${index}`}
                             className="input" 
                             style={{ fontWeight: 'bold', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '1.1rem' }}
                             value={entry.productId} 
                             onChange={e => onUpdate('productId', e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    focusField(`school-select-${index}`);
+                                }
+                            }}
                         >
                             <option value="">Select Product...</option>
                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -308,12 +358,18 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                     </div>
                     <div className="form-group flex-1" style={{ marginBottom: 0, position: 'relative' }}>
                          <Combobox 
+                            id={`school-select-${index}`}
                             options={schools}
                             value={entry.schoolId}
                             onChange={(val) => onUpdate('schoolId', val)}
                             onCreate={onCreateSchool}
                             placeholder="Select School (Optional)..."
                             inputStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px' }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    focusField(`qty-${entry.tempId}-0`);
+                                }
+                            }}
                         />
                     </div>
                 </div>
@@ -330,7 +386,7 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                         <div style={{ textAlign: 'right' }}>Total</div>
                     </div>
                     
-                    {sizes.map(size => {
+                    {sizes.map((size, idx) => {
                         const data = entry.selections[size.id] || { quantity: "", ruleId: "", totalMaterial: 0 };
                         const rules = size.material_rules || [];
                         
@@ -341,16 +397,62 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                                 data={data}
                                 rules={rules}
                                 onChange={(field, val) => handleSizeUpdate(size.id, field, val)}
+                                entryId={entry.tempId}
+                                rowIndex={idx}
+                                totalRows={sizes.length}
                             />
                         );
                     })}
+
+                    <div style={{ 
+                        marginTop: '0.5rem', 
+                        paddingTop: '0.5rem', 
+                        borderTop: '1px solid #ddd', 
+                        display: 'flex', 
+                        justifyContent: 'flex-end', 
+                        fontWeight: 'bold',
+                        color: '#666'
+                    }}>
+                        Total: {totalMeters.toFixed(2)} meters
+                    </div>
                 </div>
             )}
         </div>
     )
 }
 
-function SizeRow({ size, data, rules, onChange }) {
+function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) {
+    const qtyInputId = `qty-${entryId}-${rowIndex}`;
+    const ruleInputId = `rule-${entryId}-${rowIndex}`;
+
+    const handleQtyKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            // Try to focus rule input if rules exist, else try next row qty
+            if (rules.length > 0) {
+                 const ruleInput = document.getElementById(ruleInputId);
+                 if (ruleInput) ruleInput.focus();
+            } else {
+                 focusNextRowQty();
+            }
+        }
+    };
+
+    const handleRuleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            focusNextRowQty();
+        }
+    };
+
+    const focusNextRowQty = () => {
+        const nextQtyId = `qty-${entryId}-${rowIndex + 1}`;
+        const nextInput = document.getElementById(nextQtyId);
+        if (nextInput) {
+            nextInput.focus();
+        }
+    };
+
     const getMaterialPerUnitDisplay = () => {
         if (data.materialPerUnit) {
             return `${data.materialPerUnit} ${data.unit}`;
@@ -377,21 +479,25 @@ function SizeRow({ size, data, rules, onChange }) {
             </div>
             <div>
                  <input 
+                    id={qtyInputId}
                     type="number" 
                     className="input" 
                     placeholder="0"
                     min="0"
                     value={data.quantity} 
                     onChange={e => onChange('quantity', e.target.value)}
+                    onKeyDown={handleQtyKeyDown}
                     style={{ padding: '0.2rem 0.4rem', fontSize: '0.9rem' }}
                  />
             </div>
             <div>
                 {rules.length > 0 ? (
                     <select 
+                        id={ruleInputId}
                         className="input" 
                         value={data.ruleId || ""} 
                         onChange={e => onChange('ruleId', e.target.value)}
+                        onKeyDown={handleRuleKeyDown}
                         style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }}
                     >
                          {rules.map(r => (

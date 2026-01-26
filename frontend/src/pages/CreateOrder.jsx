@@ -96,7 +96,7 @@ export default function CreateOrder() {
   function addProductEntry() {
       setProductEntries([
           ...productEntries, 
-          { tempId: Date.now(), productId: "", schoolId: "", selections: {} } // Added schoolId
+          { tempId: Date.now(), productId: "", schoolId: "", groupWidth: "", selections: {} } // Added groupWidth
       ]);
   }
 
@@ -109,11 +109,15 @@ export default function CreateOrder() {
           if (entry.tempId !== tempId) return entry;
           
           if (field === 'productId') {
-              return { ...entry, productId: value, selections: {} };
+              return { ...entry, productId: value, groupWidth: "", selections: {} }; // Reset groupWidth
           }
           
-          if (field === 'schoolId') { // Handle school update
+          if (field === 'schoolId') {
               return { ...entry, schoolId: value };
+          }
+          
+          if (field === 'groupWidth') {
+              return { ...entry, groupWidth: value };
           }
 
           if (field === 'selections') {
@@ -127,6 +131,7 @@ export default function CreateOrder() {
           return entry;
       }));
   }
+
 
   const handleSubmit = async () => {
       if (!selectedTailor) return alert("Select a tailor");
@@ -313,8 +318,6 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
         return selectedProduct ? [...selectedProduct.sizes].sort((a,b) => a.order_index - b.order_index) : [];
     }, [selectedProduct]);
 
-    // ... (handleSizeUpdate stays same) ...
-
     const handleSizeUpdate = (sizeId, field, value) => {
         let currentData = entry.selections[sizeId] || { quantity: "", ruleId: "", fabricWidth: null, materialPerUnit: 0, unit: "", totalMaterial: 0 };
         
@@ -322,14 +325,30 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 
         if (field === 'quantity') {
             newData.quantity = value;
-            // Auto-select rule if needed
+            // Auto-select rule if needed: if not set, and (no groupWidth selected or we can infer default?)
+            // If groupWidth IS selected, we should rely on that rule? 
+            // Actually, if groupWidth is selected, ruleId SHOULD be set already.
+            // If it's NOT set, it means data is desync.
+            
             const size = sizes.find(s => s.id == sizeId);
             if (size && size.material_rules.length > 0 && !newData.ruleId) {
-                const r = size.material_rules[0];
-                newData.ruleId = r.id;
-                newData.fabricWidth = r.fabric_width_inches;
-                newData.materialPerUnit = r.length_required;
-                newData.unit = r.unit;
+                // If we have a groupWidth, try to match it
+                let r = null;
+                if (entry.groupWidth) {
+                     r = size.material_rules.find(r => r.fabric_width_inches == entry.groupWidth);
+                }
+                
+                // Fallback to first rule if no groupWidth or no match
+                if (!r) {
+                    r = size.material_rules[0];
+                }
+
+                if (r) {
+                    newData.ruleId = r.id;
+                    newData.fabricWidth = r.fabric_width_inches;
+                    newData.materialPerUnit = r.length_required;
+                    newData.unit = r.unit;
+                }
             }
         } 
         else if (field === 'ruleId') {
@@ -343,6 +362,15 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
              }
         }
         
+        // ROBUSTNESS FIX: Ensure materialPerUnit is correct if ruleId is present
+        if (newData.ruleId) {
+             const size = sizes.find(s => s.id == sizeId);
+             const rule = size?.material_rules.find(r => r.id == newData.ruleId);
+             if (rule) {
+                 newData.materialPerUnit = rule.length_required;
+             }
+        }
+
         // Re-calc total
         if (field === 'quantity' || field === 'ruleId') {
              newData.totalMaterial = (newData.quantity || 0) * (newData.materialPerUnit || 0);
@@ -365,6 +393,9 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
     }, [selectedProduct]);
 
     const handleGroupWidthChange = (width) => {
+        // Update groupWidth in parent
+        onUpdate('groupWidth', width);
+
         let newSelections = { ...entry.selections };
         
         sizes.forEach(size => {
@@ -387,6 +418,30 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 
         onUpdate('selections', newSelections);
     };
+
+    // Effect to initialize groupWidth if needed (e.g. first time)
+    // NOTE: We only want to do this if groupWidth is empty AND we have options.
+    // BUT we must interpret "empty" carefully. 
+    // If productId just changed, groupWidth was reset to "".
+    // Effect to initialize groupWidth if needed (e.g. first time)
+    useEffect(() => {
+        if (availableWidths.length > 0) {
+            // Check if current groupWidth is valid for availableWidths
+            const currentIsValid = entry.groupWidth && availableWidths.includes(Number(entry.groupWidth));
+            
+            if (!currentIsValid) {
+                // Try to find default
+                let defaultWidth = availableWidths.find(w => w == 36);
+                if (!defaultWidth) {
+                    defaultWidth = availableWidths[0];
+                }
+                
+                if (defaultWidth) {
+                     handleGroupWidthChange(defaultWidth);
+                }
+            }
+        }
+    }, [availableWidths, entry.groupWidth]); // Removed handleGroupWidthChange from deps as it's stable enough or we ignore it to prevent loops
 
     // Calculate total meters for this entry
     const totalMeters = Object.values(entry.selections).reduce((acc, curr) => acc + (curr.totalMaterial || 0), 0);
@@ -451,6 +506,7 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                             id={`width-select-${index}`}
                             className="input"
                             style={{ padding: '0.3rem', fontSize: '0.9rem' }}
+                            value={entry.groupWidth || ""} // Controlled by entry
                             onChange={(e) => handleGroupWidthChange(e.target.value)}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -458,7 +514,6 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                                     focusField(`qty-${entry.tempId}-0`);
                                 }
                             }}
-                            defaultValue=""
                          >
                              <option value="" disabled>Width</option>
                              {availableWidths.map(w => (

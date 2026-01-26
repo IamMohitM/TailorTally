@@ -64,6 +64,15 @@ if "%PREV_HEAD%" == "%NEW_HEAD%" (
     )
 )
 
+echo ---------------------------------------
+echo Running Schema Updates...
+cd backend
+call venv\Scripts\activate.bat
+python scripts/update_schema.py
+cd ..
+echo Schema Updates Completed.
+echo ---------------------------------------
+
 set NODE_SKIP_PLATFORM_CHECK=1
 
 echo Starting Backend...

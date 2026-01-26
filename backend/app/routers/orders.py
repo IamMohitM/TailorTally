@@ -54,7 +54,9 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             material_req_per_unit=material_req,
             unit=rule.unit,
             quantity=line.quantity,
-            total_material_req=total_req
+            total_material_req=total_req,
+            group_id=line.group_id,
+            given_cloth=line.given_cloth
         )
         db.add(db_line)
     
@@ -189,6 +191,12 @@ def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Se
     # 1. Update simple fields
     if update_data.school_id is not None:
         db_line.school_id = update_data.school_id
+        
+    if update_data.group_id is not None:
+        db_line.group_id = update_data.group_id
+        
+    if update_data.given_cloth is not None:
+        db_line.given_cloth = update_data.given_cloth
     
     recalc_needed = False
     
@@ -264,6 +272,8 @@ def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Se
         total_material_req=db_line.total_material_req,
         delivered_qty=delivered,
         pending_qty=pending,
+        group_id=db_line.group_id,
+        given_cloth=db_line.given_cloth,
         deliveries=db_line.deliveries
     )
 
@@ -323,6 +333,8 @@ def map_order_response(order: models.Order) -> schemas.Order:
             total_material_req=line.total_material_req,
             delivered_qty=delivered,
             pending_qty=pending,
+            group_id=line.group_id,
+            given_cloth=line.given_cloth,
             deliveries=line.deliveries
         ))
 

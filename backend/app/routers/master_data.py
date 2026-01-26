@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from io import BytesIO
 from sqlalchemy.orm import Session
 from typing import List
 from .. import models, schemas
@@ -149,8 +150,10 @@ def update_tailor(tailor_id: int, tailor: schemas.TailorCreate, db: Session = De
 @router.post("/upload")
 async def upload_master_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
+        contents = await file.read()
+        file_obj = BytesIO(contents)
         # Pass the file-like object directly to the utility
-        stats = process_master_data_file(file.file, db, file.filename)
+        stats = process_master_data_file(file_obj, db, file.filename)
         return {"message": "Import successful", "stats": stats}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

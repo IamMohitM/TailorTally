@@ -786,3 +786,20 @@ th {
   background: #f3f4f6;
   color: var(--text-color);
 }
+
+.order-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.order-row:hover {
+  background-color: #f3f4f6;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.pr-4 {
+  padding-right: 1rem;
+}

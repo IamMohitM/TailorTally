@@ -110,3 +110,9 @@ class Delivery(Base):
     date_delivered = Column(DateTime, default=datetime.utcnow)
 
     order_line = relationship("OrderLine", back_populates="deliveries")
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    key = Column(String, primary_key=True, index=True)
+    value = Column(String)

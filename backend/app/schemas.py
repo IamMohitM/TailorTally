@@ -177,3 +177,12 @@ class DashboardStats(BaseModel):
     material_work_pending: float
     top_products: List[ProductStat]
     top_tailors: List[TailorStat]
+
+# --- Admin Schemas ---
+
+class AdminPasswordVerify(BaseModel):
+    password: str
+
+class AdminPasswordChange(BaseModel):
+    current_password: str
+    new_password: str

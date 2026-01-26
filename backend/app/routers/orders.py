@@ -6,6 +6,8 @@ from ..database import get_db
 from ..database import get_db
 from datetime import datetime
 from ..utils.email_utils import send_order_email
+from fastapi import Header
+from ..utils.security import verify_password
 
 router = APIRouter(
     prefix="/orders",
@@ -265,8 +267,32 @@ def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Se
         deliveries=db_line.deliveries
     )
 
+@router.delete("/{order_id}")
+def delete_order(order_id: int, x_admin_password: str = Header(None, alias="X-Admin-Password"), db: Session = Depends(get_db)):
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    db.delete(order)
+    db.commit()
+    return {"message": "Order deleted"}
+
 @router.delete("/lines/{line_id}")
-def delete_order_line(line_id: int, db: Session = Depends(get_db)):
+def delete_order_line(line_id: int, x_admin_password: str = Header(None, alias="X-Admin-Password"), db: Session = Depends(get_db)):
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
     db_line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
     if not db_line:
         raise HTTPException(status_code=404, detail="Order Line not found")

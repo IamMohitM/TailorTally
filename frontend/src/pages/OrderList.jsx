@@ -1,10 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../api';
+import { useNotification } from '../components/Notification';
 
 export default function OrderList() {
+  const navigate = useNavigate();
+  const { showToast } = useNotification();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openMenuId, setOpenMenuId] = useState(null);
+  
+  // Delete Modal State
+  const [deleteModal, setDeleteModal] = useState({ show: false, orderId: null });
+  const [deletePassword, setDeletePassword] = useState("");
   
   // Search state
   const [search, setSearch] = useState("");
@@ -34,6 +42,13 @@ export default function OrderList() {
     return () => clearTimeout(timer);
   }, [search, sortBy, statusFilter, schoolFilter]);
 
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setOpenMenuId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   async function fetchOrders() {
     try {
       setLoading(true);
@@ -52,6 +67,31 @@ export default function OrderList() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function confirmDeleteOrder(e, orderId) {
+      // e.stopPropagation() handled in calling button
+      setDeleteModal({ show: true, orderId });
+      setDeletePassword("");
+  }
+
+      if (!deletePassword) {
+            showToast("Please enter admin password", "error");
+            return;
+      }
+      
+      try {
+          await fetchAPI(`/orders/${deleteModal.orderId}`, {
+              method: 'DELETE',
+              headers: { 'X-Admin-Password': deletePassword }
+          });
+          setDeleteModal({ show: false, orderId: null });
+          setDeletePassword("");
+          showToast("Order deleted successfully", "success");
+          fetchOrders();
+      } catch (err) {
+          showToast("Failed to delete order: " + err.message, "error");
+      }
   }
 
   return (
@@ -158,7 +198,12 @@ export default function OrderList() {
               const progress = totalQty > 0 ? Math.round((deliveredQty / totalQty) * 100) : 0;
 
               return (
-              <tr key={order.id}>
+              <tr 
+                key={order.id} 
+                onClick={() => navigate(`/orders/${order.id}`)}
+                className="order-row" // Will add this class to CSS
+                style={{ cursor: 'pointer', borderBottom: '1px solid #eee' }} // Inline fallback or move to CSS
+              >
                 <td>{new Date(order.created_at).toLocaleDateString()}</td>
                 <td>#{order.id}</td>
                 <td>{order.tailor_name}</td>
@@ -182,8 +227,43 @@ export default function OrderList() {
                     {order.status}
                   </span>
                 </td>
-                <td>
-                  <Link to={`/orders/${order.id}`} className="text-indigo-600 hover:text-indigo-900">View</Link>
+                <td className="text-right pr-4 relative">
+                  <button 
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenMenuId(openMenuId === order.id ? null : order.id);
+                    }}
+                    className="icon-btn"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="1"></circle>
+                        <circle cx="12" cy="5" r="1"></circle>
+                        <circle cx="12" cy="19" r="1"></circle>
+                    </svg>
+                  </button>
+                  
+                  {openMenuId === order.id && (
+                      <div className="dropdown-menu">
+                              <button
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      navigate(`/orders/${order.id}`);
+                                  }}
+                                  className="dropdown-item"
+                              >
+                                  View Details
+                              </button>
+                              <button
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmDeleteOrder(e, order.id);
+                                  }}
+                                  className="dropdown-item danger"
+                              >
+                                  Delete Order
+                              </button>
+                      </div>
+                  )}
                 </td>
               </tr>
               );
@@ -197,6 +277,32 @@ export default function OrderList() {
             )}
           </tbody>
         </table>
+      )}
+      {/* Delete Modal */}
+      {deleteModal.show && (
+            <div className="modal-overlay" style={{ zIndex: 200 }}>
+                <div className="modal-content" style={{ maxWidth: '400px' }}>
+                    <h3 className="modal-title">Delete Order #{deleteModal.orderId}</h3>
+                    <p className="modal-message mb-4">
+                        Are you sure you want to delete this order? All items and history will be lost.
+                    </p>
+                    <div className="form-group">
+                        <label style={{ fontSize: '0.9rem' }}>Admin Password</label>
+                        <input 
+                            type="password" 
+                            className="input" 
+                            value={deletePassword}
+                            onChange={e => setDeletePassword(e.target.value)}
+                            placeholder="Enter password"
+                            autoFocus
+                        />
+                    </div>
+                    <div className="modal-actions mt-4">
+                        <button className="btn secondary" onClick={() => setDeleteModal({ show: false, orderId: null })}>Cancel</button>
+                        <button className="btn danger" onClick={performDeleteOrder}>Delete</button>
+                    </div>
+                </div>
+            </div>
       )}
     </div>
   );

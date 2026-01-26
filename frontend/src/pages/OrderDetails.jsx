@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { fetchAPI } from '../api';
 import { formatDate } from '../utils';
+import { useNotification } from '../components/Notification';
 
 import PrintableOrder from '../components/PrintableOrder';
 
@@ -69,6 +70,18 @@ export default function OrderDetails() {
       return stats;
   }, [order]);
 
+  const groupGivenMap = useMemo(() => {
+      if (!order || !order.order_lines) return {};
+      const map = {};
+      order.order_lines.forEach(line => {
+          if (line.group_id && line.given_cloth != null) {
+              if (!map[line.group_id]) map[line.group_id] = 0;
+              map[line.group_id] += parseFloat(line.given_cloth);
+          }
+      });
+      return map;
+  }, [order]);
+
   if (loading) return <div>Loading...</div>;
   if (!order) return <div>Order not found</div>;
 
@@ -108,7 +121,9 @@ export default function OrderDetails() {
                        line={line} 
                        onUpdate={loadOrder} 
                        masterData={masterData}
+
                        groupStats={groupStats}
+                       groupGivenMap={groupGivenMap}
                    />
                 ))}
             </tbody>
@@ -122,7 +137,8 @@ export default function OrderDetails() {
 
 
 
-function OrderLineRow({ line, onUpdate, masterData, groupStats }) {
+function OrderLineRow({ line, onUpdate, masterData, groupStats, groupGivenMap }) {
+    const { showToast } = useNotification();
     const isCompleted = line.pending_qty <= 0;
     const [deliveryQty, setDeliveryQty] = useState("");
     const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
@@ -130,6 +146,7 @@ function OrderLineRow({ line, onUpdate, masterData, groupStats }) {
     const [showHistory, setShowHistory] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+    const [deletePassword, setDeletePassword] = useState("");
 
     // Edit Mode State
     const [isEditing, setIsEditing] = useState(false);
@@ -172,15 +189,24 @@ function OrderLineRow({ line, onUpdate, masterData, groupStats }) {
     }
 
     async function handleDeleteConfirmed() {
+        if (!deletePassword) {
+            showToast("Please enter the admin password", "error");
+            return;
+        }
+
         try {
             await fetchAPI(`/orders/lines/${line.id}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': deletePassword
+                }
             });
             setShowConfirmDelete(false);
+            setDeletePassword(""); // Reset
+            showToast("Item deleted", "success");
             onUpdate();
         } catch (e) {
-            alert("Failed to delete line: " + e.message);
-            setShowConfirmDelete(false);
+            showToast("Failed to delete line: " + e.message, "error");
         }
     }
 
@@ -280,40 +306,53 @@ function OrderLineRow({ line, onUpdate, masterData, groupStats }) {
                 <td>{line.school_name || '-'}</td>
                 <td>{line.size_label}</td>
                 <td>{line.material_req_per_unit} {line.unit}</td>
-                <td style={{ color: '#666' }}>{materialInHand} {line.unit}</td>
+                <td style={{ color: '#666' }}>
+                    {(() => {
+                         const groupId = line.group_id;
+                         if (groupId && groupGivenMap && groupGivenMap[groupId] !== undefined) {
+                             const groupGiven = groupGivenMap[groupId];
+                             const est = (groupStats && groupStats[groupId]) || 0;
+                             const diff = groupGiven - est;
+                             return (
+                                <div style={{ fontSize: '0.85rem' }}>
+                                    <div style={{ fontWeight: '600', color: '#333' }}>{groupGiven} {line.unit}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>Est: {est.toFixed(2)}</div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold', color: diff >= 0 ? '#2e7d32' : '#c62828' }}>
+                                         {diff >= 0 ? '+' : ''}{diff.toFixed(2)}
+                                    </div>
+                                </div>
+                             );
+                         }
+                         return `${materialInHand} ${line.unit}`;
+                    })()}
+                </td>
                 <td>{line.quantity}</td>
                 <td>{line.delivered_qty}</td>
                 <td style={{ color: isCompleted ? 'green' : 'orange', fontWeight: 'bold' }}>
-                    {line.pending_qty}
-                    {line.given_cloth ? (() => {
-                        const given = parseFloat(line.given_cloth);
-                        const est = (line.group_id && groupStats && groupStats[line.group_id]) 
-                            ? groupStats[line.group_id] 
-                            : (line.quantity * line.material_req_per_unit);
-                        const diff = given - est;
-                        
-                        return (
-                            <div style={{ fontSize: '0.75rem', marginTop: '2px', fontWeight: 'normal' }}>
-                                <div style={{ color: '#555' }}>Given: {given}m</div>
-                                <div style={{ color: '#777' }} title="Total estimated for group">Est: {est.toFixed(2)}m</div>
-                                <div style={{ color: diff >= 0 ? '#2e7d32' : '#c62828', fontWeight: '600' }}>
-                                    {diff >= 0 ? '+' : ''}{diff.toFixed(2)}m
-                                </div>
-                            </div>
-                        );
-                    })() : null}
-                </td>
+                        {line.pending_qty}
+                    </td>
                 <td className="relative">
                      {/* Confirmation Modal */}
                      {showConfirmDelete && (
                         <div className="modal-overlay" style={{ zIndex: 100 }}>
                             <div className="modal-content" style={{ maxWidth: '400px' }}>
-                                <h3 className="modal-title">Delete Item?</h3>
-                                <p className="modal-message">
-                                    Are you sure you want to delete <strong>{line.product_name}</strong> ({line.size_label})? This action cannot be undone.
+                                <h3 className="modal-title">Delete Item</h3>
+                                <p className="modal-message mb-4">
+                                    Are you sure you want to delete <strong>{line.product_name}</strong>?
                                 </p>
-                                <div className="modal-actions">
-                                    <button className="btn" style={{ background: '#e5e7eb', color: '#374151' }} onClick={() => setShowConfirmDelete(false)}>Cancel</button>
+                                <div className="form-group">
+                                    <label style={{ fontSize: '0.9rem' }}>Admin Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="input" 
+                                        value={deletePassword}
+                                        onChange={e => setDeletePassword(e.target.value)}
+                                        placeholder="Enter password"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="modal-actions mt-4">
+                                    <button className="btn secondary" onClick={() => { setShowConfirmDelete(false); setDeletePassword(""); }}>Cancel</button>
                                     <button className="btn danger" onClick={handleDeleteConfirmed}>Delete</button>
                                 </div>
                             </div>

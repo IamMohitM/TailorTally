@@ -115,6 +115,13 @@ def db_seed():
                  db.add(models.School(name=school_name))
         db.commit()
 
+    # 4. Settings (Admin Password)
+    from .utils.security import get_password_hash
+    if not db.query(models.Settings).filter(models.Settings.key == "admin_password").first():
+        hashed_pwd = get_password_hash("admin")
+        db.add(models.Settings(key="admin_password", value=hashed_pwd))
+        db.commit()
+
     db.close()
     print("Seed data initialized.")
 

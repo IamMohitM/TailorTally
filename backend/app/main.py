@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import master_data, orders, schools, dashboard
+from .routers import master_data, orders, schools, dashboard, admin
 # from . import seed # Will implement seed trigger later or via script
 
 # Create tables
@@ -26,3 +26,4 @@ app.include_router(master_data.router)
 app.include_router(orders.router)
 app.include_router(schools.router)
 app.include_router(dashboard.router)
+app.include_router(admin.router)

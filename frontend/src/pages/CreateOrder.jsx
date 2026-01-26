@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../api';
 import Combobox from '../components/Combobox';
@@ -43,10 +43,25 @@ export default function CreateOrder() {
       setSchools(sData);
       setProducts(pData);
       setProductEntries([{ tempId: Date.now(), productId: "", selections: {} }]);
-    } catch (e) {
+    } catch(e) {
       console.error(e);
     }
   }
+
+  const prevProductEntriesLength = useRef(0);
+
+  useEffect(() => {
+    if (productEntries.length > prevProductEntriesLength.current) {
+        // New entry added, focus it
+        const index = productEntries.length - 1;
+        // Small timeout to allow render
+        setTimeout(() => {
+            const el = document.getElementById(`product-select-${index}`);
+            if (el) el.focus();
+        }, 50);
+    }
+    prevProductEntriesLength.current = productEntries.length;
+  }, [productEntries]);
 
   const handleCreateTailor = async (name) => {
       // Removed prompt for email. Created with name only.
@@ -278,6 +293,7 @@ export default function CreateOrder() {
                 onCreateSchool={handleCreateSchool} // Pass handler
                 onUpdate={(field, val) => updateProductEntry(entry.tempId, field, val)}
                 onRemove={() => removeProductEntry(entry.tempId)}
+                onAddProductEntry={addProductEntry}
             />
         ))}
         <button className="btn" onClick={addProductEntry}>+ Add Product Group</button>
@@ -291,7 +307,7 @@ export default function CreateOrder() {
   );
 }
 
-function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onUpdate, onRemove }) {
+function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onUpdate, onRemove, onAddProductEntry }) {
     const selectedProduct = products.find(p => p.id == entry.productId);
     const sizes = useMemo(() => {
         return selectedProduct ? [...selectedProduct.sizes].sort((a,b) => a.order_index - b.order_index) : [];
@@ -382,15 +398,16 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
         }, 0);
     };
 
+// ... (ProductEntryItem props) ...
     return (
-        <div className="card" style={{ background: '#fafafa', marginBottom: '0.75rem', padding: '0.75rem' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
-                <div className="flex gap-4 flex-1">
+        <div className="card" style={{ background: '#fafafa', marginBottom: '0.5rem', padding: '0.5rem' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '0.5rem' }}>
+                <div className="flex gap-2 flex-1">
                     <div className="form-group flex-1" style={{ marginBottom: 0 }}>
                         <select 
                             id={`product-select-${index}`}
                             className="input" 
-                            style={{ fontWeight: 'bold', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '1.1rem' }}
+                            style={{ fontWeight: 'bold', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '1rem' }}
                             value={entry.productId} 
                             onChange={e => onUpdate('productId', e.target.value)}
                             onKeyDown={(e) => {
@@ -412,10 +429,16 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                             onChange={(val) => onUpdate('schoolId', val)}
                             onCreate={onCreateSchool}
                             placeholder="Select School (Optional)..."
-                            inputStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px' }}
+                            inputStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '4px', padding: '0.3rem', fontSize: '0.9rem' }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
-                                    focusField(`qty-${entry.tempId}-0`);
+                                    // Check if width select exists
+                                    const widthSelect = document.getElementById(`width-select-${index}`);
+                                    if (widthSelect) {
+                                        widthSelect.focus();
+                                    } else {
+                                        focusField(`qty-${entry.tempId}-0`);
+                                    }
                                 }
                             }}
                         />
@@ -423,14 +446,21 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                 </div>
 
                 {availableWidths.length > 0 && (
-                    <div className="form-group" style={{ marginBottom: 0, marginLeft: '1rem', width: '120px' }}>
+                    <div className="form-group" style={{ marginBottom: 0, marginLeft: '0.5rem', width: '100px' }}>
                          <select 
+                            id={`width-select-${index}`}
                             className="input"
-                            style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                            style={{ padding: '0.3rem', fontSize: '0.9rem' }}
                             onChange={(e) => handleGroupWidthChange(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    focusField(`qty-${entry.tempId}-0`);
+                                }
+                            }}
                             defaultValue=""
                          >
-                             <option value="" disabled>Set Width</option>
+                             <option value="" disabled>Width</option>
                              {availableWidths.map(w => (
                                  <option key={w} value={w}>{w}"</option>
                              ))}
@@ -438,15 +468,15 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                     </div>
                 )}
                 
-                <button className="btn danger" style={{ padding: '0.2rem 0.5rem', marginLeft: '1rem' }} onClick={onRemove}>X</button>
+                <button className="btn danger" style={{ padding: '0.1rem 0.4rem', marginLeft: '0.5rem', fontSize: '0.8rem' }} onClick={onRemove}>X</button>
             </div>
 
             {selectedProduct && (
-                <div style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 100px 120px', gap: '0.75rem', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#888', textTransform: 'uppercase' }}>
+                <div style={{ borderTop: '1px solid #eee', paddingTop: '0.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 100px', gap: '0.5rem', marginBottom: '0.2rem', fontWeight: 'bold', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase' }}>
                         <div>Size</div>
-                        <div>Material/Unt</div>
-                        <div>Quantity</div>
+                        <div>Qty</div>
+                        <div>Mat/Unit</div>
                         <div style={{ textAlign: 'right' }}>Total</div>
                     </div>
                     
@@ -464,33 +494,42 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                                 entryId={entry.tempId}
                                 rowIndex={idx}
                                 totalRows={sizes.length}
+                                givenClothId={`given-cloth-${index}`}
                             />
                         );
                     })}
 
                     <div style={{ 
-                        marginTop: '0.5rem', 
-                        paddingTop: '0.5rem', 
+                        marginTop: '0.25rem', 
+                        paddingTop: '0.25rem', 
                         borderTop: '1px solid #ddd', 
                         display: 'flex', 
                         justifyContent: 'space-between', 
                         alignItems: 'center',
                         fontWeight: 'bold',
-                        color: '#666'
+                        color: '#666',
+                        fontSize: '0.9rem'
                     }}>
                         <div className="flex gap-2 items-center">
-                            <label style={{ fontSize: '0.9rem' }}>Given:</label>
+                            <label style={{ fontSize: '0.8rem' }}>Given:</label>
                              <input 
+                                id={`given-cloth-${index}`}
                                 type="number"
                                 step="0.01"
                                 className="input" 
-                                style={{ width: '80px', padding: '0.2rem' }}
+                                style={{ width: '70px', padding: '0.2rem' }}
                                 value={entry.given_cloth || ""} 
                                 onChange={e => onUpdate('given_cloth', e.target.value)} 
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        onAddProductEntry();
+                                    }
+                                }}
                                 placeholder="0"
                             />
                         </div>
-                        <div>Total: {totalMeters.toFixed(2)} meters</div>
+                        <div>Total: {totalMeters.toFixed(2)}m</div>
                     </div>
                 </div>
             )}
@@ -498,7 +537,7 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
     )
 }
 
-function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) {
+function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows, givenClothId }) {
     const qtyInputId = `qty-${entryId}-${rowIndex}`;
 
     const handleQtyKeyDown = (e) => {
@@ -513,6 +552,9 @@ function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) 
         const nextInput = document.getElementById(nextQtyId);
         if (nextInput) {
             nextInput.focus();
+        } else if (givenClothId) {
+            const givenCloth = document.getElementById(givenClothId);
+            if (givenCloth) givenCloth.focus();
         }
     };
 
@@ -530,31 +572,31 @@ function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) 
     return (
         <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: '100px 1fr 100px 120px', 
-            gap: '0.75rem', 
+            gridTemplateColumns: '80px 80px 1fr 100px', 
+            gap: '0.5rem', 
             alignItems: 'center', 
             padding: '2px 0',
             borderBottom: '1px solid #f0f0f0' 
         }}>
-            <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{size.label}</div>
-            <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                {getMaterialPerUnitDisplay()}
-            </div>
+            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{size.label}</div>
             <div>
                  <input 
                     id={qtyInputId}
                     type="number" 
                     className="input" 
-                    placeholder="0"
+                    placeholder="-"
                     min="0"
                     value={data.quantity} 
                     onChange={e => onChange('quantity', e.target.value)}
                     onKeyDown={handleQtyKeyDown}
-                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.9rem' }}
+                    style={{ padding: '0.1rem 0.3rem', fontSize: '0.9rem', width: '100%' }}
                  />
             </div>
+            <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                {getMaterialPerUnitDisplay()}
+            </div>
             <div style={{ fontSize: '0.9rem', textAlign: 'right', fontWeight: data.totalMaterial > 0 ? '600' : 'normal' }}>
-                {data.totalMaterial > 0 ? `${data.totalMaterial.toFixed(2)} ${data.unit}` : '-'}
+                {data.totalMaterial > 0 ? `${data.totalMaterial.toFixed(2)}` : '-'}
             </div>
         </div>
     )

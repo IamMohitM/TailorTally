@@ -174,6 +174,107 @@ def record_delivery(line_id: int, delivery: schemas.DeliveryCreate, db: Session 
     
     return db_delivery
 
+@router.put("/lines/{line_id}", response_model=schemas.OrderLine)
+def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Session = Depends(get_db)):
+    db_line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
+    if not db_line:
+        raise HTTPException(status_code=404, detail="Order Line not found")
+
+    # If any essential field is changed, we may need to recalculate material reqs
+    # Fields that affect material: product_id (via size?), size_id, fabric_width_inches, rule_id
+    # If quantity changes, total_req changes.
+
+    # 1. Update simple fields
+    if update_data.school_id is not None:
+        db_line.school_id = update_data.school_id
+    
+    recalc_needed = False
+    
+    # Check if we need to find a new rule
+    new_size_id = update_data.size_id if update_data.size_id is not None else db_line.size_id
+    new_fabric_width = update_data.fabric_width_inches if update_data.fabric_width_inches is not None else db_line.fabric_width_inches
+    # Note: rule_id isn't stored on db_line, but used to find the rule initially. 
+    # If provided in update, we use it. If not, we re-query if size/width changed.
+    
+    if (update_data.size_id is not None or 
+        update_data.fabric_width_inches is not None or 
+        update_data.rule_id is not None):
+        
+        # Find new rule
+        if update_data.rule_id:
+            rule = db.query(models.MaterialRule).filter(models.MaterialRule.id == update_data.rule_id).first()
+        else:
+            query = db.query(models.MaterialRule).filter(models.MaterialRule.size_id == new_size_id)
+            if new_fabric_width:
+                rule = query.filter(models.MaterialRule.fabric_width_inches == new_fabric_width).first()
+            else:
+                rule = query.first() # Default or only rule
+        
+        if not rule:
+             raise HTTPException(status_code=400, detail=f"No material rule found for Size ID {new_size_id}")
+             
+        db_line.material_req_per_unit = rule.length_required
+        db_line.unit = rule.unit
+        recalc_needed = True
+
+    if update_data.product_id is not None:
+        db_line.product_id = update_data.product_id
+    
+    if update_data.size_id is not None:
+        db_line.size_id = update_data.size_id
+        
+    if update_data.fabric_width_inches is not None:
+        db_line.fabric_width_inches = update_data.fabric_width_inches
+
+    if update_data.quantity is not None:
+        db_line.quantity = update_data.quantity
+        recalc_needed = True
+        
+    if recalc_needed:
+        db_line.total_material_req = db_line.quantity * db_line.material_req_per_unit
+
+    db.commit()
+    db.refresh(db_line)
+    
+    # Re-map manually because db_line is just an OrderLine object, but we want the schema with computed fields
+    # actually schemas.OrderLine needs relationships loaded. db_line has them lazy loaded usually.
+    # We can perform a quick mapping similar to map_order_response or just return it and let Pydantic handle it 
+    # IF the attributes are available. The 'deliveries' rel is there. 
+    # But schemas.OrderLine has computed fields pending_qty etc.
+    # We can reuse the logic from map_order_response but scoped to one line.
+    
+    delivered = sum(d.quantity_delivered for d in db_line.deliveries)
+    pending = db_line.quantity - delivered
+    
+    return schemas.OrderLine(
+        id=db_line.id,
+        order_id=db_line.order_id,
+        product_id=db_line.product_id,
+        size_id=db_line.size_id,
+        product_name=db_line.product.name if db_line.product else f"Product #{db_line.product_id}",
+        size_label=db_line.size.label if db_line.size else f"Size #{db_line.size_id}",
+        school_id=db_line.school_id,
+        school_name=db_line.school.name if db_line.school else None,
+        fabric_width_inches=db_line.fabric_width_inches,
+        quantity=db_line.quantity,
+        material_req_per_unit=db_line.material_req_per_unit,
+        unit=db_line.unit,
+        total_material_req=db_line.total_material_req,
+        delivered_qty=delivered,
+        pending_qty=pending,
+        deliveries=db_line.deliveries
+    )
+
+@router.delete("/lines/{line_id}")
+def delete_order_line(line_id: int, db: Session = Depends(get_db)):
+    db_line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
+    if not db_line:
+        raise HTTPException(status_code=404, detail="Order Line not found")
+        
+    db.delete(db_line)
+    db.commit()
+    return {"message": "Order line deleted"}
+
 def map_order_response(order: models.Order) -> schemas.Order:
     # Helper to calculate delivered/pending quantities for response
     mapped_lines = []

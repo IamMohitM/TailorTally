@@ -105,6 +105,17 @@ class OrderLineBase(BaseModel):
 
 class OrderLineCreate(OrderLineBase):
     rule_id: Optional[int] = None
+    group_id: Optional[str] = None
+    given_cloth: Optional[float] = None
+
+class OrderLineUpdate(BaseModel):
+    product_id: Optional[int] = None
+    size_id: Optional[int] = None
+    school_id: Optional[int] = None
+    fabric_width_inches: Optional[int] = None
+    quantity: Optional[int] = None
+    rule_id: Optional[int] = None
+    given_cloth: Optional[float] = None
 
 class OrderLine(OrderLineBase):
     id: int
@@ -117,6 +128,8 @@ class OrderLine(OrderLineBase):
     total_material_req: float
     delivered_qty: int = 0 
     pending_qty: int = 0
+    group_id: Optional[str] = None
+    given_cloth: Optional[float] = None
     deliveries: List[Delivery] = []
 
     class Config:
@@ -128,6 +141,8 @@ class OrderCreate(BaseModel):
     order_lines: List[OrderLineCreate]
     created_at: Optional[datetime] = None
     notes: Optional[str] = None
+    given_cloth: Optional[float] = None
+    send_email: bool = False
 
 class Order(BaseModel):
     id: int
@@ -138,6 +153,7 @@ class Order(BaseModel):
     status: str
     created_at: datetime
     notes: Optional[str] = None
+    given_cloth: Optional[float] = None
     order_lines: List[OrderLine] = []
     order_lines: List[OrderLine] = []
 

@@ -72,6 +72,9 @@ start "Backend" cmd /k "cd backend && venv\Scripts\activate.bat && uvicorn app.m
 echo Starting Frontend...
 start "Frontend" cmd /k "cd frontend && npm run dev"
 
+echo Starting DB Viewer...
+start "DB Viewer" cmd /k "cd backend && venv\Scripts\activate.bat && sqlite_web tailor_tally.db --port 8090 --no-browser"
+
 echo Opening Browser...
 timeout /t 5 >nul
 start http://localhost:5173

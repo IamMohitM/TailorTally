@@ -11,6 +11,7 @@ export default function Navbar() {
       <NavLink to="/dashboard" className="nav-link">Dashboard</NavLink>
       
       <NavLink to="/create-order" className="nav-link btn-new">+ New Order</NavLink>
+      <a href="http://localhost:8090" target="_blank" rel="noopener noreferrer" className="nav-link">DB Viewer</a>
     </nav>
   );
 }

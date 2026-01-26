@@ -69,6 +69,7 @@ class Order(Base):
     status = Column(String, default="Pending") # Pending, In Progress, Completed
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(String, nullable=True)
+    given_cloth = Column(Float, nullable=True)
 
     tailor = relationship("Tailor", back_populates="orders")
     # school = relationship("School", back_populates="orders") # REMOVED
@@ -90,6 +91,9 @@ class OrderLine(Base):
     
     quantity = Column(Integer)
     total_material_req = Column(Float) # quantity * material_req_per_unit
+    
+    group_id = Column(String, nullable=True) # To group lines in UI
+    given_cloth = Column(Float, nullable=True) # Given cloth for this line (or group)
 
     order = relationship("Order", back_populates="order_lines")
     product = relationship("Product")

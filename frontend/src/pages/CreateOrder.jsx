@@ -17,6 +17,7 @@ export default function CreateOrder() {
 
   const [productEntries, setProductEntries] = useState([]);
 
+
   useEffect(() => {
     loadData();
   }, []);
@@ -104,6 +105,10 @@ export default function CreateOrder() {
               return { ...entry, selections: value };
           }
 
+          if (field === 'given_cloth') {
+              return { ...entry, given_cloth: value };
+          }
+
           return entry;
       }));
   }
@@ -133,6 +138,9 @@ export default function CreateOrder() {
       productEntries.forEach(entry => {
           if (!entry.productId) return;
           
+          let firstLineOfGroup = true;
+          const groupId = entry.tempId.toString();
+
           Object.entries(entry.selections).forEach(([sizeId, data]) => {
               if (data.quantity > 0) {
                   orderLines.push({
@@ -141,8 +149,11 @@ export default function CreateOrder() {
                       school_id: entry.schoolId || null, // Pass schoolId
                       rule_id: data.ruleId,
                       fabric_width_inches: data.fabricWidth,
-                      quantity: parseInt(data.quantity)
+                      quantity: parseInt(data.quantity),
+                      group_id: groupId,
+                      given_cloth: firstLineOfGroup ? (entry.given_cloth ? parseFloat(entry.given_cloth) : null) : null
                   });
+                  firstLineOfGroup = false;
               }
           });
       });
@@ -154,6 +165,7 @@ export default function CreateOrder() {
           // school_id: selectedSchool || null, // REMOVED
           created_at: new Date(orderDate).toISOString(),
           notes,
+          given_cloth: productEntries.reduce((acc, entry) => acc + (parseFloat(entry.given_cloth || 0)), 0),
           order_lines: orderLines,
           send_email: true
       };
@@ -324,6 +336,42 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
         onUpdate('selections', newSelections);
     };
 
+    // Calculate unique available fabric widths
+    const availableWidths = useMemo(() => {
+        if (!selectedProduct) return [];
+        const widths = new Set();
+        selectedProduct.sizes.forEach(s => {
+            s.material_rules.forEach(r => {
+                if (r.fabric_width_inches) widths.add(r.fabric_width_inches);
+            });
+        });
+        return Array.from(widths).sort((a, b) => a - b);
+    }, [selectedProduct]);
+
+    const handleGroupWidthChange = (width) => {
+        let newSelections = { ...entry.selections };
+        
+        sizes.forEach(size => {
+            // Find rule for this size with matching width
+            const rule = size.material_rules.find(r => r.fabric_width_inches == width);
+            
+            if (rule) {
+                // Update selection for this size
+                const currentData = newSelections[size.id] || { quantity: "", ruleId: "", fabricWidth: null, materialPerUnit: 0, unit: "", totalMaterial: 0 };
+                newSelections[size.id] = {
+                    ...currentData,
+                    ruleId: rule.id,
+                    fabricWidth: rule.fabric_width_inches,
+                    materialPerUnit: rule.length_required,
+                    unit: rule.unit,
+                    totalMaterial: (currentData.quantity || 0) * rule.length_required
+                };
+            }
+        });
+
+        onUpdate('selections', newSelections);
+    };
+
     // Calculate total meters for this entry
     const totalMeters = Object.values(entry.selections).reduce((acc, curr) => acc + (curr.totalMaterial || 0), 0);
 
@@ -373,16 +421,32 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                         />
                     </div>
                 </div>
+
+                {availableWidths.length > 0 && (
+                    <div className="form-group" style={{ marginBottom: 0, marginLeft: '1rem', width: '120px' }}>
+                         <select 
+                            className="input"
+                            style={{ padding: '0.4rem', fontSize: '0.9rem' }}
+                            onChange={(e) => handleGroupWidthChange(e.target.value)}
+                            defaultValue=""
+                         >
+                             <option value="" disabled>Set Width</option>
+                             {availableWidths.map(w => (
+                                 <option key={w} value={w}>{w}"</option>
+                             ))}
+                         </select>
+                    </div>
+                )}
+                
                 <button className="btn danger" style={{ padding: '0.2rem 0.5rem', marginLeft: '1rem' }} onClick={onRemove}>X</button>
             </div>
 
             {selectedProduct && (
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '80px 100px 100px 1fr 100px', gap: '0.75rem', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#888', textTransform: 'uppercase' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 100px 120px', gap: '0.75rem', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#888', textTransform: 'uppercase' }}>
                         <div>Size</div>
                         <div>Material/Unt</div>
                         <div>Quantity</div>
-                        <div>Rule</div>
                         <div style={{ textAlign: 'right' }}>Total</div>
                     </div>
                     
@@ -409,11 +473,24 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                         paddingTop: '0.5rem', 
                         borderTop: '1px solid #ddd', 
                         display: 'flex', 
-                        justifyContent: 'flex-end', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
                         fontWeight: 'bold',
                         color: '#666'
                     }}>
-                        Total: {totalMeters.toFixed(2)} meters
+                        <div className="flex gap-2 items-center">
+                            <label style={{ fontSize: '0.9rem' }}>Given:</label>
+                             <input 
+                                type="number"
+                                step="0.01"
+                                className="input" 
+                                style={{ width: '80px', padding: '0.2rem' }}
+                                value={entry.given_cloth || ""} 
+                                onChange={e => onUpdate('given_cloth', e.target.value)} 
+                                placeholder="0"
+                            />
+                        </div>
+                        <div>Total: {totalMeters.toFixed(2)} meters</div>
                     </div>
                 </div>
             )}
@@ -423,22 +500,8 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 
 function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) {
     const qtyInputId = `qty-${entryId}-${rowIndex}`;
-    const ruleInputId = `rule-${entryId}-${rowIndex}`;
 
     const handleQtyKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            // Try to focus rule input if rules exist, else try next row qty
-            if (rules.length > 0) {
-                 const ruleInput = document.getElementById(ruleInputId);
-                 if (ruleInput) ruleInput.focus();
-            } else {
-                 focusNextRowQty();
-            }
-        }
-    };
-
-    const handleRuleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             focusNextRowQty();
@@ -467,7 +530,7 @@ function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) 
     return (
         <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: '80px 100px 100px 1fr 100px', 
+            gridTemplateColumns: '100px 1fr 100px 120px', 
             gap: '0.75rem', 
             alignItems: 'center', 
             padding: '2px 0',
@@ -489,24 +552,6 @@ function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows }) 
                     onKeyDown={handleQtyKeyDown}
                     style={{ padding: '0.2rem 0.4rem', fontSize: '0.9rem' }}
                  />
-            </div>
-            <div>
-                {rules.length > 0 ? (
-                    <select 
-                        id={ruleInputId}
-                        className="input" 
-                        value={data.ruleId || ""} 
-                        onChange={e => onChange('ruleId', e.target.value)}
-                        onKeyDown={handleRuleKeyDown}
-                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }}
-                    >
-                         {rules.map(r => (
-                            <option key={r.id} value={r.id}>
-                                {r.fabric_width_inches ? `${r.fabric_width_inches}"` : 'Std'}
-                            </option>
-                         ))}
-                    </select>
-                ) : <span style={{fontSize: '0.75rem', color: '#999'}}>No rules</span>}
             </div>
             <div style={{ fontSize: '0.9rem', textAlign: 'right', fontWeight: data.totalMaterial > 0 ? '600' : 'normal' }}>
                 {data.totalMaterial > 0 ? `${data.totalMaterial.toFixed(2)} ${data.unit}` : '-'}

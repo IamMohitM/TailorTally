@@ -188,31 +188,35 @@ def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Se
     # Fields that affect material: product_id (via size?), size_id, fabric_width_inches, rule_id
     # If quantity changes, total_req changes.
 
-    # 1. Update simple fields
-    if update_data.school_id is not None:
-        db_line.school_id = update_data.school_id
+    # 1. Update simple fields using __fields_set__ to allow unsetting (setting to None)
+    # Using model_dump(exclude_unset=True) is also an option in Pydantic v2, or .dict(exclude_unset=True) in v1
+    # But checking __fields_set__ is explicit.
+    
+    updates = update_data.dict(exclude_unset=True)
+    
+    if "school_id" in updates:
+        db_line.school_id = updates["school_id"]
         
-    if update_data.group_id is not None:
-        db_line.group_id = update_data.group_id
+    if "group_id" in updates:
+        db_line.group_id = updates["group_id"]
         
-    if update_data.given_cloth is not None:
-        db_line.given_cloth = update_data.given_cloth
+    if "given_cloth" in updates:
+        db_line.given_cloth = updates["given_cloth"]
     
     recalc_needed = False
     
     # Check if we need to find a new rule
-    new_size_id = update_data.size_id if update_data.size_id is not None else db_line.size_id
-    new_fabric_width = update_data.fabric_width_inches if update_data.fabric_width_inches is not None else db_line.fabric_width_inches
-    # Note: rule_id isn't stored on db_line, but used to find the rule initially. 
-    # If provided in update, we use it. If not, we re-query if size/width changed.
+    new_size_id = updates.get("size_id", db_line.size_id)
+    new_fabric_width = updates.get("fabric_width_inches", db_line.fabric_width_inches)
     
-    if (update_data.size_id is not None or 
-        update_data.fabric_width_inches is not None or 
-        update_data.rule_id is not None):
+    # Note: rule_id isn't stored on db_line, but used to find the rule initially. 
+    if ("size_id" in updates or 
+        "fabric_width_inches" in updates or 
+        "rule_id" in updates):
         
         # Find new rule
-        if update_data.rule_id:
-            rule = db.query(models.MaterialRule).filter(models.MaterialRule.id == update_data.rule_id).first()
+        if updates.get("rule_id"):
+            rule = db.query(models.MaterialRule).filter(models.MaterialRule.id == updates["rule_id"]).first()
         else:
             query = db.query(models.MaterialRule).filter(models.MaterialRule.size_id == new_size_id)
             if new_fabric_width:
@@ -227,17 +231,17 @@ def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Se
         db_line.unit = rule.unit
         recalc_needed = True
 
-    if update_data.product_id is not None:
-        db_line.product_id = update_data.product_id
+    if "product_id" in updates:
+        db_line.product_id = updates["product_id"]
     
-    if update_data.size_id is not None:
-        db_line.size_id = update_data.size_id
+    if "size_id" in updates:
+        db_line.size_id = updates["size_id"]
         
-    if update_data.fabric_width_inches is not None:
-        db_line.fabric_width_inches = update_data.fabric_width_inches
+    if "fabric_width_inches" in updates:
+        db_line.fabric_width_inches = updates["fabric_width_inches"]
 
-    if update_data.quantity is not None:
-        db_line.quantity = update_data.quantity
+    if "quantity" in updates:
+        db_line.quantity = updates["quantity"]
         recalc_needed = True
         
     if recalc_needed:

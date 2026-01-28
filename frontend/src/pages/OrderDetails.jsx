@@ -306,17 +306,38 @@ function OrderLineRow({ line, onUpdate, masterData }) {
                     {/* Simplified Edit Form for now to avoid breaking table layout with spans */}
                     <div style={{ padding: '10px', background: '#fff3e0', border: '1px solid #ffcc80' }}>
                         <strong>Editing {line.product_name} - {line.size_label}</strong>
-                         <div className="flex gap-2 mt-2">
-                             <label>Qty: 
+                         <div className="flex gap-2 mt-2 items-end">
+                             <label>
+                                 <span className="text-sm">School:</span>
+                                 <select 
+                                     className="input" 
+                                     value={editData.school_id || ""} 
+                                     onChange={e => {
+                                         const val = e.target.value;
+                                         setEditData({...editData, school_id: val === "" ? null : parseInt(val)});
+                                     }}
+                                     style={{ minWidth: '150px' }}
+                                 >
+                                     <option value="">Select School</option>
+                                     {masterData.schools.map(s => (
+                                         <option key={s.id} value={s.id}>{s.name}</option>
+                                     ))}
+                                 </select>
+                             </label>
+                             <label>
+                                 <span className="text-sm">Qty:</span>
                                 <input 
                                     type="number" className="input" style={{width: '60px'}}
-                                    value={editData.quantity} onChange={e => setEditData({...editData, quantity: parseInt(e.target.value)})} 
+                                    value={editData.quantity} 
+                                    onChange={e => setEditData({...editData, quantity: parseInt(e.target.value) || 0})} 
                                 />
                              </label>
-                              <label>Given Cloth: 
+                              <label>
+                                <span className="text-sm">Given Cloth:</span>
                                 <input 
                                     type="number" step="0.01" className="input" style={{width: '80px'}}
-                                    value={editData.given_cloth || ""} onChange={e => setEditData({...editData, given_cloth: parseFloat(e.target.value)})} 
+                                    value={editData.given_cloth || ""} 
+                                    onChange={e => setEditData({...editData, given_cloth: e.target.value === "" ? null : parseFloat(e.target.value)})} 
                                 />
                              </label>
                              <button className="btn success" onClick={handleSave}>Save</button>

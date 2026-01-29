@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Literal
 from datetime import datetime
 
@@ -16,8 +16,7 @@ class MaterialRule(MaterialRuleBase):
     id: int
     size_id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class SizeBase(BaseModel):
     label: str
@@ -32,8 +31,7 @@ class Size(SizeBase):
     product_id: int
     material_rules: List[MaterialRule] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class ProductBase(BaseModel):
     name: str
@@ -47,8 +45,7 @@ class Product(ProductBase):
     id: int
     sizes: List[Size] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TailorBase(BaseModel):
     name: str
@@ -62,8 +59,7 @@ class TailorCreate(TailorBase):
 class Tailor(TailorBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- School Schemas ---
 
@@ -76,8 +72,7 @@ class SchoolCreate(SchoolBase):
 class School(SchoolBase):
     id: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Delivery Schemas ---
 
@@ -91,8 +86,7 @@ class Delivery(BaseModel):
     quantity_delivered: int
     date_delivered: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Order Schemas ---
 
@@ -101,7 +95,7 @@ class OrderLineBase(BaseModel):
     size_id: int
     school_id: Optional[int] = None
     fabric_width_inches: Optional[int] = None
-    quantity: int
+    quantity: int = Field(..., gt=0)
 
 class OrderLineCreate(OrderLineBase):
     rule_id: Optional[int] = None
@@ -113,7 +107,7 @@ class OrderLineUpdate(BaseModel):
     size_id: Optional[int] = None
     school_id: Optional[int] = None
     fabric_width_inches: Optional[int] = None
-    quantity: Optional[int] = None
+    quantity: Optional[int] = Field(None, gt=0)
     rule_id: Optional[int] = None
     given_cloth: Optional[float] = None
 
@@ -132,8 +126,7 @@ class OrderLine(OrderLineBase):
     given_cloth: Optional[float] = None
     deliveries: List[Delivery] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class OrderCreate(BaseModel):
     tailor_id: int
@@ -155,10 +148,8 @@ class Order(BaseModel):
     notes: Optional[str] = None
     given_cloth: Optional[float] = None
     order_lines: List[OrderLine] = []
-    order_lines: List[OrderLine] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Dashboard Schemas ---
 

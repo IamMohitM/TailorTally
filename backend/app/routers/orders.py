@@ -16,6 +16,11 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.Order)
 def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
+    # Verify Tailor exists
+    tailor = db.query(models.Tailor).filter(models.Tailor.id == order.tailor_id).first()
+    if not tailor:
+        raise HTTPException(status_code=400, detail="Tailor not found")
+
     # Create Order
     db_order = models.Order(
         tailor_id=order.tailor_id, 
@@ -68,7 +73,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         # Check explicit flag AND presence of email
         if order.send_email and db_order.tailor.email:
             order_response = map_order_response(db_order)
-            send_order_email(db_order.tailor.email, order_response.dict())
+            send_order_email(db_order.tailor.email, order_response.model_dump())
     except Exception as e:
         print(f"Failed to send email: {e}")
 
@@ -205,7 +210,7 @@ def update_order_line(
     # Using model_dump(exclude_unset=True) is also an option in Pydantic v2, or .dict(exclude_unset=True) in v1
     # But checking __fields_set__ is explicit.
     
-    updates = update_data.dict(exclude_unset=True)
+    updates = update_data.model_dump(exclude_unset=True)
     
     if "school_id" in updates:
         db_line.school_id = updates["school_id"]

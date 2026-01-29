@@ -1,0 +1,40 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f backend/pyproject.toml ]; then pip install .[test]; fi
+        # Ensure pytest and httpx (for TestClient) are installed if not in pyproject deps explicitly for dev
+        pip install pytest httpx
+        # Install project in editable mode for imports to work nicely or just install reqs
+        # Looking at pyproject, it has dependencies.
+        # We need to install the package or dependencies.
+        # Using a simple pip install of requirements if available, or . 
+        cd backend
+        pip install .
+        
+    - name: Run Tests
+      run: |
+        cd backend
+        pytest tests/test_suite.py

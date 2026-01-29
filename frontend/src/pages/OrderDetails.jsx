@@ -190,9 +190,12 @@ function OrderLineRow({ line, onUpdate, masterData }) {
     const [showMenu, setShowMenu] = useState(false);
     const [showConfirmDelete, setShowConfirmDelete] = useState(false);
     const [deletePassword, setDeletePassword] = useState("");
-
+    
     // Edit Mode State
     const [isEditing, setIsEditing] = useState(false);
+    const [showEditConfirm, setShowEditConfirm] = useState(false);
+    const [editPassword, setEditPassword] = useState("");
+    const [authorizedPassword, setAuthorizedPassword] = useState(null); // Store verified password
     const [editData, setEditData] = useState({});
 
     // Material In Hand Calculation (Fallback if no stats)
@@ -216,16 +219,47 @@ function OrderLineRow({ line, onUpdate, masterData }) {
             fabric_width_inches: line.fabric_width_inches,
             given_cloth: line.given_cloth // ensure this is preserved/editable
         });
-        setIsEditing(true);
+        // Prompt for password
+        setShowEditConfirm(true);
+    }
+    
+    async function handleVerifyEditPassword() {
+        if (!editPassword) {
+            showToast("Please enter the admin password", "error");
+            return;
+        }
+        
+        try {
+            // Verify Password
+            const isVerified = await fetchAPI('/admin/verify-password', {
+                method: 'POST',
+                body: JSON.stringify({ password: editPassword })
+            });
+
+            if (isVerified) {
+                setAuthorizedPassword(editPassword); // Store for Save action
+                setShowEditConfirm(false);
+                setEditPassword("");
+                setIsEditing(true);
+            } else {
+                 showToast("Invalid admin password", "error");
+            }
+        } catch (e) {
+             showToast("Password verification failed: " + e.message, "error");
+        }
     }
 
     async function handleSave() {
         try {
             await fetchAPI(`/orders/lines/${line.id}`, {
                 method: 'PUT',
-                body: JSON.stringify(editData)
+                body: JSON.stringify(editData),
+                headers: {
+                    'X-Admin-Password': authorizedPassword
+                }
             });
             setIsEditing(false);
+            setAuthorizedPassword(null); // Clear password after save for security (optional)
             onUpdate();
         } catch (e) {
             alert("Failed to update line: " + e.message);
@@ -408,6 +442,34 @@ function OrderLineRow({ line, onUpdate, masterData }) {
                 </td>
 
                 <td className="relative">
+                     {/* Edit Confirmation Modal */}
+                     {showEditConfirm && (
+                        <div className="modal-overlay" style={{ zIndex: 100 }}>
+                            <div className="modal-content" style={{ maxWidth: '400px' }}>
+                                <h3 className="modal-title">Unlock Item for Editing</h3>
+                                <p className="modal-message mb-4">
+                                    Please enter the admin password to edit <strong>{line.product_name}</strong>.
+                                </p>
+                                <div className="form-group">
+                                    <label style={{ fontSize: '0.9rem' }}>Admin Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="input" 
+                                        value={editPassword}
+                                        onChange={e => setEditPassword(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleVerifyEditPassword()}
+                                        placeholder="Enter password"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="modal-actions mt-4">
+                                    <button className="btn secondary" onClick={() => { setShowEditConfirm(false); setEditPassword(""); }}>Cancel</button>
+                                    <button className="btn success" onClick={handleVerifyEditPassword}>Unlock</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                      {/* Confirmation Modal */}
                      {showConfirmDelete && (
                         <div className="modal-overlay" style={{ zIndex: 100 }}>

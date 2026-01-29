@@ -179,7 +179,20 @@ def record_delivery(line_id: int, delivery: schemas.DeliveryCreate, db: Session 
     return db_delivery
 
 @router.put("/lines/{line_id}", response_model=schemas.OrderLine)
-def update_order_line(line_id: int, update_data: schemas.OrderLineUpdate, db: Session = Depends(get_db)):
+def update_order_line(
+    line_id: int, 
+    update_data: schemas.OrderLineUpdate, 
+    x_admin_password: str = Header(None, alias="X-Admin-Password"),
+    db: Session = Depends(get_db)
+):
+    # Verify Admin Password
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
     db_line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
     if not db_line:
         raise HTTPException(status_code=404, detail="Order Line not found")

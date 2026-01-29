@@ -11,7 +11,9 @@ export async function fetchAPI(endpoint, options = {}) {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || `API Error: ${response.statusText}`);
+        const detail = errorData.detail;
+        const errorMessage = typeof detail === 'string' ? detail : JSON.stringify(detail);
+        throw new Error(errorMessage || `API Error: ${response.statusText}`);
     }
 
     return response.json();

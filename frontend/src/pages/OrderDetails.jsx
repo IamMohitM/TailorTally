@@ -56,7 +56,12 @@ export default function OrderDetails() {
           if (pDiff !== 0) return pDiff;
           const sA = a.school_name || "";
           const sB = b.school_name || "";
-          return sA.localeCompare(sB);
+          const sDiff = sA.localeCompare(sB);
+          if (sDiff !== 0) return sDiff;
+          
+          // Tie-breakers for stable sorting: Size, then ID
+          if (a.size_id !== b.size_id) return a.size_id - b.size_id;
+          return a.id - b.id;
       });
 
       // 2. Metadata for grouping
@@ -213,7 +218,7 @@ function OrderLineRow({ line, onUpdate, masterData }) {
     function startEdit() {
         setEditData({
             product_id: line.product_id,
-            school_id: line.school_id || "",
+            school_id: line.school_id || null, // Ensure null if not set, not empty string
             size_id: line.size_id,
             quantity: line.quantity,
             fabric_width_inches: line.fabric_width_inches,
@@ -262,7 +267,8 @@ function OrderLineRow({ line, onUpdate, masterData }) {
             setAuthorizedPassword(null); // Clear password after save for security (optional)
             onUpdate();
         } catch (e) {
-            alert("Failed to update line: " + e.message);
+            console.error("Update failed", e);
+            alert("Failed to update line: " + (e.message || JSON.stringify(e)));
         }
     }
 
@@ -557,21 +563,19 @@ function OrderLineRow({ line, onUpdate, masterData }) {
                                     >
                                         {showHistory ? 'Hide Log' : 'View Log'}
                                     </button>
+                                    <button 
+                                        className="dropdown-item" 
+                                        onClick={() => startEdit()}
+                                    >
+                                        Edit Item
+                                    </button>
                                     {!isCompleted && (
-                                        <>
-                                            <button 
-                                                className="dropdown-item" 
-                                                onClick={() => startEdit()}
-                                            >
-                                                Edit Item
-                                            </button>
-                                            <button 
-                                                className="dropdown-item danger" 
-                                                onClick={() => setShowConfirmDelete(true)}
-                                            >
-                                                Delete Item
-                                            </button>
-                                        </>
+                                        <button 
+                                            className="dropdown-item danger" 
+                                            onClick={() => setShowConfirmDelete(true)}
+                                        >
+                                            Delete Item
+                                        </button>
                                     )}
                                 </div>
                             )}

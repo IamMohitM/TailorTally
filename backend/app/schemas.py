@@ -134,8 +134,16 @@ class OrderCreate(BaseModel):
     order_lines: List[OrderLineCreate]
     created_at: Optional[datetime] = None
     notes: Optional[str] = None
+    slip_no: Optional[str] = None
     given_cloth: Optional[float] = None
     send_email: bool = False
+
+class OrderUpdate(BaseModel):
+    tailor_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    slip_no: Optional[str] = None
+    status: Optional[str] = None
 
 class Order(BaseModel):
     id: int
@@ -146,6 +154,7 @@ class Order(BaseModel):
     status: str
     created_at: datetime
     notes: Optional[str] = None
+    slip_no: Optional[str] = None
     given_cloth: Optional[float] = None
     order_lines: List[OrderLine] = []
 

@@ -21,11 +21,11 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     if not tailor:
         raise HTTPException(status_code=400, detail="Tailor not found")
 
-    # Create Order
     db_order = models.Order(
         tailor_id=order.tailor_id, 
         # school_id=order.school_id, # REMOVED 
         notes=order.notes,
+        slip_no=order.slip_no,
         created_at=order.created_at or datetime.utcnow()
     )
     db.add(db_order)
@@ -95,9 +95,11 @@ def list_orders(
         if search.isdigit():
              query = query.filter(models.Order.id == int(search))
         else:
-             # Search by tailor name
-             # Join with Tailor table to filter by name
-             query = query.join(models.Tailor).filter(models.Tailor.name.ilike(f"%{search}%"))
+             # Search by tailor name or slip number
+             query = query.join(models.Tailor).filter(
+                 (models.Tailor.name.ilike(f"%{search}%")) |
+                 (models.Order.slip_no.ilike(f"%{search}%"))
+             )
 
     # 3. Filter by School (Check if any line has this school)
     if school_id:
@@ -182,6 +184,42 @@ def record_delivery(line_id: int, delivery: schemas.DeliveryCreate, db: Session 
             db.refresh(order)
     
     return db_delivery
+
+@router.put("/{order_id}", response_model=schemas.Order)
+def update_order(
+    order_id: int, 
+    update_data: schemas.OrderUpdate, 
+    x_admin_password: str = Header(None, alias="X-Admin-Password"),
+    db: Session = Depends(get_db)
+):
+    # Verify Admin Password
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    updates = update_data.model_dump(exclude_unset=True)
+    
+    if "tailor_id" in updates:
+        db_order.tailor_id = updates["tailor_id"]
+    if "notes" in updates:
+        db_order.notes = updates["notes"]
+    if "slip_no" in updates:
+        db_order.slip_no = updates["slip_no"]
+    if "status" in updates:
+        db_order.status = updates["status"]
+    if "created_at" in updates:
+        db_order.created_at = updates["created_at"]
+
+    db.commit()
+    db.refresh(db_order)
+    return map_order_response(db_order)
 
 @router.put("/lines/{line_id}", response_model=schemas.OrderLine)
 def update_order_line(
@@ -369,5 +407,6 @@ def map_order_response(order: models.Order) -> schemas.Order:
         status=order.status,
         created_at=order.created_at,
         notes=order.notes,
+        slip_no=order.slip_no,
         order_lines=mapped_lines
     )

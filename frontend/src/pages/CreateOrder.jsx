@@ -13,6 +13,7 @@ export default function CreateOrder() {
   const [tailorEmail, setTailorEmail] = useState(""); // State for email
   const [selectedSchool, setSelectedSchool] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [slipNo, setSlipNo] = useState("");
   const [notes, setNotes] = useState("");
 
   const [productEntries, setProductEntries] = useState([]);
@@ -184,6 +185,7 @@ export default function CreateOrder() {
           tailor_id: selectedTailor,
           // school_id: selectedSchool || null, // REMOVED
           created_at: new Date(orderDate).toISOString(),
+          slip_no: slipNo,
           notes,
           given_cloth: productEntries.reduce((acc, entry) => acc + (parseFloat(entry.given_cloth || 0)), 0),
           order_lines: orderLines,
@@ -255,6 +257,24 @@ export default function CreateOrder() {
                     className="input" 
                     value={orderDate} 
                     onChange={e => setOrderDate(e.target.value)} 
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusField('order-notes');
+                        }
+                    }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Slip No.</label>
+                <input 
+                    id="slip-no"
+                    type="text" 
+                    className="input" 
+                    value={slipNo} 
+                    onChange={e => setSlipNo(e.target.value)} 
+                    placeholder="Physical slip #"
                     onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                             e.preventDefault();

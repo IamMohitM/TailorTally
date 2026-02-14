@@ -11,6 +11,13 @@ export default function OrderDetails() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [masterData, setMasterData] = useState({ products: [], schools: [] });
+  
+  // Order Meta Edit State
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
+  const [showMetaEditConfirm, setShowMetaEditConfirm] = useState(false);
+  const [metaEditPassword, setMetaEditPassword] = useState("");
+  const [metaEditData, setMetaEditData] = useState({ slip_no: "", notes: "" });
+  const { showToast } = useNotification();
 
   useEffect(() => {
     loadOrder();
@@ -44,6 +51,48 @@ export default function OrderDetails() {
   const handlePrint = () => {
     window.print();
   };
+
+  const [authorizedPasswordForMeta, setAuthorizedPasswordForMeta] = useState(null);
+
+  async function handleVerifyMetaEditPassword() {
+    if (!metaEditPassword) {
+      showToast("Please enter the admin password", "error");
+      return;
+    }
+    try {
+      const isVerified = await fetchAPI('/admin/verify-password', {
+        method: 'POST',
+        body: JSON.stringify({ password: metaEditPassword })
+      });
+      if (isVerified) {
+        setAuthorizedPasswordForMeta(metaEditPassword);
+        setIsEditingMeta(true);
+        setMetaEditData({ slip_no: order.slip_no || "", notes: order.notes || "" });
+        setShowMetaEditConfirm(false);
+        setMetaEditPassword("");
+      } else {
+        showToast("Invalid admin password", "error");
+      }
+    } catch (e) {
+      showToast("Verification failed", "error");
+    }
+  }
+
+  async function handleSaveMeta() {
+    try {
+      await fetchAPI(`/orders/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(metaEditData),
+        headers: { 'X-Admin-Password': authorizedPasswordForMeta }
+      });
+      setIsEditingMeta(false);
+      setAuthorizedPasswordForMeta(null);
+      showToast("Order updated successfully", "success");
+      loadOrder();
+    } catch (e) {
+      showToast("Failed to update order: " + e.message, "error");
+    }
+  }
 
   // Grouping Logic
   const processedLines = useMemo(() => {
@@ -141,12 +190,80 @@ export default function OrderDetails() {
       <div className="no-print flex justify-between items-center" style={{marginBottom: '1rem'}}>
         <div>
             <h1>Order #{order.id}</h1>
-            <div style={{ color: '#666' }}>Tailor: {order.tailor_name} | Status: {order.status}</div>
+            <div style={{ color: '#666', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <span>Tailor: {order.tailor_name}</span>
+              <span>|</span>
+              <span>Status: {order.status}</span>
+              <span>|</span>
+              <span>Slip No: <strong>{order.slip_no || '-'}</strong></span>
+              {!isEditingMeta && (
+                <button 
+                  className="btn secondary" 
+                  style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}
+                  onClick={() => setShowMetaEditConfirm(true)}
+                >
+                  Edit Slip/Notes
+                </button>
+              )}
+            </div>
         </div>
         <div className="flex gap-2">
             <button className="btn" onClick={handlePrint}>Print / Save PDF</button>
         </div>
       </div>
+
+      {isEditingMeta && (
+        <div className="card no-print" style={{ background: '#fff7ed', border: '1px solid #fdba74', marginBottom: '1rem' }}>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Slip No.</label>
+              <input 
+                type="text" 
+                className="input" 
+                value={metaEditData.slip_no} 
+                onChange={e => setMetaEditData({ ...metaEditData, slip_no: e.target.value })}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+              <label>Notes</label>
+              <input 
+                type="text" 
+                className="input" 
+                value={metaEditData.notes} 
+                onChange={e => setMetaEditData({ ...metaEditData, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button className="btn success" onClick={handleSaveMeta}>Save</button>
+              <button className="btn secondary" onClick={() => { setIsEditingMeta(false); setAuthorizedPasswordForMeta(null); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMetaEditConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 300 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <h3 className="modal-title">Edit Order Details</h3>
+            <p className="modal-message mb-4">Enter admin password to edit Slip No. or Notes.</p>
+            <div className="form-group">
+              <label>Admin Password</label>
+              <input 
+                type="password" 
+                className="input" 
+                value={metaEditPassword}
+                onChange={e => setMetaEditPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleVerifyMetaEditPassword()}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions mt-4">
+              <button className="btn secondary" onClick={() => { setShowMetaEditConfirm(false); setMetaEditPassword(""); }}>Cancel</button>
+              <button className="btn success" onClick={handleVerifyMetaEditPassword}>Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="no-print card">
         <h3>Items</h3>

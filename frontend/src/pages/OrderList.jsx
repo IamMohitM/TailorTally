@@ -185,9 +185,10 @@ export default function OrderList() {
           <thead>
             <tr>
               <th>Date</th>
-              <th>Order ID</th>
-              <th>Tailor</th>
-              <th>Progress</th>
+               <th>Order ID</th>
+               <th>Slip No.</th>
+               <th>Tailor</th>
+               <th>Progress</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -206,8 +207,9 @@ export default function OrderList() {
                 style={{ cursor: 'pointer', borderBottom: '1px solid #eee' }} // Inline fallback or move to CSS
               >
                 <td>{new Date(order.created_at).toLocaleDateString()}</td>
-                <td>#{order.id}</td>
-                <td>{order.tailor_name}</td>
+                 <td>#{order.id}</td>
+                 <td>{order.slip_no || '-'}</td>
+                 <td>{order.tailor_name}</td>
                 <td>
                   <div className="progress-wrapper">
                     <div className="progress-container">

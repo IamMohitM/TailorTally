@@ -69,6 +69,7 @@ class Order(Base):
     status = Column(String, default="Pending") # Pending, In Progress, Completed
     created_at = Column(DateTime, default=datetime.utcnow)
     notes = Column(String, nullable=True)
+    slip_no = Column(String, nullable=True)
     given_cloth = Column(Float, nullable=True)
 
     tailor = relationship("Tailor", back_populates="orders")

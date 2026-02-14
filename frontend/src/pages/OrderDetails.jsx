@@ -342,13 +342,14 @@ function OrderLineRow({ line, onUpdate, masterData }) {
         // If isEditing, maybe we render a special row.
         return (
              <tr>
-                <td colSpan="9">
-                    {/* Simplified Edit Form for now to avoid breaking table layout with spans */}
-                    <div style={{ padding: '10px', background: '#fff3e0', border: '1px solid #ffcc80' }}>
-                        <strong>Editing {line.product_name} - {line.size_label}</strong>
-                         <div className="flex gap-2 mt-2 items-end">
-                             <label>
-                                 <span className="text-sm">School:</span>
+                <td colSpan="9" style={{ padding: '0' }}>
+                    <div style={{ padding: '20px', background: '#fff7ed', borderBottom: '2px solid #fdba74' }}>
+                        <div style={{ marginBottom: '15px' }}>
+                            <strong style={{ fontSize: '1.1rem', color: '#9a3412' }}>Editing: {line.product_name} ({line.size_label})</strong>
+                        </div>
+                         <div className="flex flex-wrap gap-6 items-end">
+                             <div className="flex flex-col gap-1">
+                                 <span className="text-sm font-semibold" style={{ color: '#666' }}>School</span>
                                  <select 
                                      className="input" 
                                      value={editData.school_id || ""} 
@@ -356,32 +357,34 @@ function OrderLineRow({ line, onUpdate, masterData }) {
                                          const val = e.target.value;
                                          setEditData({...editData, school_id: val === "" ? null : parseInt(val)});
                                      }}
-                                     style={{ minWidth: '150px' }}
+                                     style={{ minWidth: '220px', height: '40px' }}
                                  >
                                      <option value="">Select School</option>
                                      {masterData.schools.map(s => (
                                          <option key={s.id} value={s.id}>{s.name}</option>
                                      ))}
                                  </select>
-                             </label>
-                             <label>
-                                 <span className="text-sm">Qty:</span>
+                             </div>
+                             <div className="flex flex-col gap-1">
+                                 <span className="text-sm font-semibold" style={{ color: '#666' }}>Quantity</span>
                                 <input 
-                                    type="number" className="input" style={{width: '60px'}}
+                                    type="number" className="input" style={{ width: '100px', height: '40px' }}
                                     value={editData.quantity} 
                                     onChange={e => setEditData({...editData, quantity: parseInt(e.target.value) || 0})} 
                                 />
-                             </label>
-                              <label>
-                                <span className="text-sm">Given Cloth:</span>
+                             </div>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-semibold" style={{ color: '#666' }}>Given Cloth ({line.unit})</span>
                                 <input 
-                                    type="number" step="0.01" className="input" style={{width: '80px'}}
+                                    type="number" step="0.01" className="input" style={{ width: '120px', height: '40px' }}
                                     value={editData.given_cloth || ""} 
                                     onChange={e => setEditData({...editData, given_cloth: e.target.value === "" ? null : parseFloat(e.target.value)})} 
                                 />
-                             </label>
-                             <button className="btn success" onClick={handleSave}>Save</button>
-                             <button className="btn danger" onClick={() => setIsEditing(false)}>Cancel</button>
+                             </div>
+                             <div className="flex gap-3">
+                                 <button className="btn success" onClick={handleSave} style={{ height: '40px', padding: '0 1.5rem', fontWeight: 'bold' }}>Save Changes</button>
+                                 <button className="btn secondary" onClick={() => setIsEditing(false)} style={{ height: '40px', padding: '0 1.5rem' }}>Cancel</button>
+                             </div>
                          </div>
                     </div>
                 </td>
@@ -508,24 +511,35 @@ function OrderLineRow({ line, onUpdate, masterData }) {
                              <span className="badge success">Done</span>
                         ) : (
                             recording ? (
-                                <div className="flex gap-1 items-center" style={{ position: 'absolute', right: 0, background: 'white', padding: '5px', borderRadius: '4px', border: '1px solid #eee', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', zIndex: 60 }}>
-                                    <input 
-                                        type="date" 
-                                        className="input" 
-                                        style={{ padding: '0.2rem' }} 
-                                        value={deliveryDate} 
-                                        onChange={e => setDeliveryDate(e.target.value)}
-                                    />
-                                    <input 
-                                        type="number" 
-                                        className="input" 
-                                        style={{ width: '50px', padding: '0.2rem' }} 
-                                        value={deliveryQty} 
-                                        onChange={e => setDeliveryQty(e.target.value)}
-                                        placeholder="Qty"
-                                    />
-                                    <button className="btn success" style={{ padding: '0.2rem 0.5rem' }} onClick={handleDelivery}>✓</button>
-                                    <button className="btn danger" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setRecording(false)}>X</button>
+                                 <div className="flex gap-2 items-center" style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', background: 'white', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 60, minWidth: '320px' }}>
+                                    <div className="flex flex-col gap-1">
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#666' }}>Date</span>
+                                        <input 
+                                            type="date" 
+                                            className="input" 
+                                            style={{ padding: '0.4rem', fontSize: '0.85rem' }} 
+                                            value={deliveryDate} 
+                                            onChange={e => setDeliveryDate(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleDelivery()}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#666' }}>Qty</span>
+                                        <input 
+                                            type="number" 
+                                            className="input" 
+                                            style={{ width: '70px', padding: '0.4rem', fontSize: '0.85rem' }} 
+                                            value={deliveryQty} 
+                                            onChange={e => setDeliveryQty(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleDelivery()}
+                                            placeholder="Qty"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 ml-2">
+                                        <button className="btn success" style={{ padding: '0.5rem 0.8rem' }} onClick={handleDelivery} title="Save Delivery">Log</button>
+                                        <button className="btn secondary" style={{ padding: '0.5rem 0.8rem' }} onClick={() => setRecording(false)} title="Cancel">Cancel</button>
+                                    </div>
                                 </div>
                             ) : (
                                 <button 

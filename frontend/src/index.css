@@ -134,6 +134,10 @@ th {
   gap: 1rem;
 }
 
+.flex-col {
+  flex-direction: column;
+}
+
 /* Navbar */
 .navbar {
   background: #111827;

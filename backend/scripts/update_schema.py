@@ -43,6 +43,9 @@ def main():
         # 1. orders: given_cloth (Float)
         add_column_if_not_exists(cursor, "orders", "given_cloth", "FLOAT")
         
+        # 1b. orders: slip_no (String)
+        add_column_if_not_exists(cursor, "orders", "slip_no", "VARCHAR")
+        
         # 2. order_lines: given_cloth (Float)
         add_column_if_not_exists(cursor, "order_lines", "given_cloth", "FLOAT")
         

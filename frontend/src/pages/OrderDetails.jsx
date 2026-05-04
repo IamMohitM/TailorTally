@@ -411,6 +411,25 @@ function OrderLineRow({ line, onUpdate, masterData }) {
         }
     }
 
+    async function handleDeleteDelivery(deliveryId) {
+        if (!window.confirm("Are you sure you want to delete this delivery log?")) {
+            return;
+        }
+
+        try {
+            await fetchAPI(`/orders/deliveries/${deliveryId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': authorizedPassword
+                }
+            });
+            showToast("Delivery deleted", "success");
+            onUpdate();
+        } catch (e) {
+            showToast("Failed to delete delivery: " + e.message, "error");
+        }
+    }
+
     async function handleDelivery() {
         if (!deliveryQty || parseInt(deliveryQty) <= 0) return;
         try {
@@ -503,6 +522,27 @@ function OrderLineRow({ line, onUpdate, masterData }) {
                                  <button className="btn secondary" onClick={() => setIsEditing(false)} style={{ height: '40px', padding: '0 1.5rem' }}>Cancel</button>
                              </div>
                          </div>
+                         
+                         {line.deliveries && line.deliveries.length > 0 && (
+                            <div style={{ marginTop: '20px', borderTop: '1px solid #fdba74', paddingTop: '15px' }}>
+                                <strong style={{ fontSize: '1rem', color: '#9a3412', display: 'block', marginBottom: '10px' }}>Manage Deliveries</strong>
+                                <ul style={{ paddingLeft: '0', listStyle: 'none' }}>
+                                    {line.deliveries.map(d => (
+                                        <li key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', background: '#fff', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ffd8a8' }}>
+                                            <span>{formatDate(d.date_delivered)}</span>
+                                            <span><strong>{d.quantity_delivered}</strong> delivered</span>
+                                            <button 
+                                                className="btn danger" 
+                                                style={{ padding: '4px 8px', fontSize: '0.8rem', marginLeft: 'auto' }}
+                                                onClick={() => handleDeleteDelivery(d.id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                         )}
                     </div>
                 </td>
              </tr>

@@ -371,6 +371,54 @@ def delete_order_line(line_id: int, x_admin_password: str = Header(None, alias="
     db.commit()
     return {"message": "Order line deleted"}
 
+@router.delete("/deliveries/{delivery_id}")
+def delete_delivery(delivery_id: int, x_admin_password: str = Header(None, alias="X-Admin-Password"), db: Session = Depends(get_db)):
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    delivery = db.query(models.Delivery).filter(models.Delivery.id == delivery_id).first()
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+        
+    line_id = delivery.order_line_id
+    db.delete(delivery)
+    db.commit()
+
+    # Update Order Status
+    line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
+    if line:
+        order = db.query(models.Order).filter(models.Order.id == line.order_id).first()
+        if order:
+            db.refresh(order)
+            all_completed = True
+            any_delivered = False
+            
+            for ol in order.order_lines:
+                db.refresh(ol) 
+                d_qty = sum(d.quantity_delivered for d in ol.deliveries)
+                if d_qty > 0:
+                    any_delivered = True
+                if d_qty < ol.quantity:
+                    all_completed = False
+            
+            new_status = order.status
+            if all_completed and len(order.order_lines) > 0:
+                new_status = "Completed"
+            elif any_delivered:
+                new_status = "In Progress"
+            else:
+                new_status = "Pending"
+            
+            if new_status != order.status:
+                order.status = new_status
+                db.commit()
+
+    return {"message": "Delivery deleted"}
+
 def map_order_response(order: models.Order) -> schemas.Order:
     # Helper to calculate delivered/pending quantities for response
     mapped_lines = []

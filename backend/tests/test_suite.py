@@ -177,3 +177,51 @@ def test_security_delete_protection(client):
         # If order still exists, check lines
         curr_lines = refetch.json()["order_lines"]
         assert len(curr_lines) == 0, "Line should be deleted"
+
+def test_delete_delivery(client):
+    """
+    Test 5: Delete Delivery
+    - Delete without password -> 401
+    - Delete with wrong password -> 401
+    - Delete with correct password -> 200
+    - Verify delivery is gone and quantities/status are updated
+    """
+    # Setup: Create an order to delete
+    tailors = client.get("/master-data/tailors").json()
+    products = client.get("/master-data/products").json()
+    
+    create_payload = {
+        "tailor_id": tailors[0]["id"],
+        "order_lines": [{"product_id": products[0]["id"], "size_id": products[0]["sizes"][0]["id"], "quantity": 10}]
+    }
+    order = client.post("/orders/", json=create_payload).json()
+    line_id = order["order_lines"][0]["id"]
+
+    # Record delivery
+    delivery_payload = {"quantity_delivered": 5}
+    delivery_resp = client.post(f"/orders/lines/{line_id}/deliveries", json=delivery_payload)
+    assert delivery_resp.status_code == 200
+    delivery_id = delivery_resp.json()["id"]
+
+    password = "admin"
+
+    # 1. No Password
+    resp = client.delete(f"/orders/deliveries/{delivery_id}")
+    assert resp.status_code == 401
+
+    # 2. Wrong Password
+    resp = client.delete(f"/orders/deliveries/{delivery_id}", headers={"X-Admin-Password": "wrong"})
+    assert resp.status_code == 401
+
+    # 3. Correct Password
+    resp = client.delete(f"/orders/deliveries/{delivery_id}", headers={"X-Admin-Password": password})
+    assert resp.status_code == 200
+    
+    # 4. Verify Refetch
+    refetch = client.get(f"/orders/{order['id']}").json()
+    refetch_line = refetch["order_lines"][0]
+    assert len(refetch_line["deliveries"]) == 0
+    assert refetch_line["pending_qty"] == 10
+    assert refetch_line["delivered_qty"] == 0
+    assert refetch["status"] == "Pending"
+

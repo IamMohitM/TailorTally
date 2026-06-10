@@ -419,6 +419,28 @@ def delete_delivery(delivery_id: int, x_admin_password: str = Header(None, alias
 
     return {"message": "Delivery deleted"}
 
+@router.post("/{order_id}/refresh", response_model=schemas.Order)
+def refresh_order_master_data(order_id: int, db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    for line in db_order.order_lines:
+        query = db.query(models.MaterialRule).filter(models.MaterialRule.size_id == line.size_id)
+        if line.fabric_width_inches:
+            rule = query.filter(models.MaterialRule.fabric_width_inches == line.fabric_width_inches).first()
+        else:
+            rule = query.first()
+
+        if rule:
+            line.material_req_per_unit = rule.length_required
+            line.unit = rule.unit
+            line.total_material_req = line.quantity * rule.length_required
+
+    db.commit()
+    db.refresh(db_order)
+    return map_order_response(db_order)
+
 def map_order_response(order: models.Order) -> schemas.Order:
     # Helper to calculate delivered/pending quantities for response
     mapped_lines = []

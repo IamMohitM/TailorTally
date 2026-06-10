@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../api';
 import { formatDate } from '../utils';
 import { useNotification } from '../components/Notification';
@@ -8,6 +8,7 @@ import PrintableOrder from '../components/PrintableOrder';
 
 export default function OrderDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [masterData, setMasterData] = useState({ products: [], schools: [] });
@@ -17,6 +18,10 @@ export default function OrderDetails() {
   const [showMetaEditConfirm, setShowMetaEditConfirm] = useState(false);
   const [metaEditPassword, setMetaEditPassword] = useState("");
   const [metaEditData, setMetaEditData] = useState({ slip_no: "", notes: "" });
+  const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteOrderConfirm, setShowDeleteOrderConfirm] = useState(false);
+  const [deleteOrderPassword, setDeleteOrderPassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const { showToast } = useNotification();
 
   useEffect(() => {
@@ -91,6 +96,44 @@ export default function OrderDetails() {
       loadOrder();
     } catch (e) {
       showToast("Failed to update order: " + e.message, "error");
+    }
+  }
+
+  async function handleRefreshEstimates() {
+    try {
+      setRefreshing(true);
+      const updatedOrder = await fetchAPI(`/orders/${id}/refresh`, {
+        method: 'POST'
+      });
+      setOrder(updatedOrder);
+      showToast("Estimates updated from master data successfully", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to refresh estimates: " + e.message, "error");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleDeleteOrder() {
+    if (!deleteOrderPassword) {
+      showToast("Please enter the admin password", "error");
+      return;
+    }
+    try {
+      setDeleting(true);
+      await fetchAPI(`/orders/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': deleteOrderPassword }
+      });
+      showToast("Order deleted successfully", "success");
+      setShowDeleteOrderConfirm(false);
+      setDeleteOrderPassword("");
+      navigate('/');
+    } catch (e) {
+      showToast("Failed to delete order: " + e.message, "error");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -208,7 +251,20 @@ export default function OrderDetails() {
             </div>
         </div>
         <div className="flex gap-2">
+            <button 
+                className="btn secondary" 
+                onClick={handleRefreshEstimates} 
+                disabled={refreshing}
+            >
+                {refreshing ? 'Refreshing...' : 'Refresh Estimates'}
+            </button>
             <button className="btn" onClick={handlePrint}>Print / Save PDF</button>
+            <button 
+                className="btn danger" 
+                onClick={() => setShowDeleteOrderConfirm(true)}
+            >
+                Delete Order
+            </button>
         </div>
       </div>
 
@@ -260,6 +316,45 @@ export default function OrderDetails() {
             <div className="modal-actions mt-4">
               <button className="btn secondary" onClick={() => { setShowMetaEditConfirm(false); setMetaEditPassword(""); }}>Cancel</button>
               <button className="btn success" onClick={handleVerifyMetaEditPassword}>Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteOrderConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 300 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <h3 className="modal-title">Delete Order #{order.id}</h3>
+            <p className="modal-message mb-4">
+              Are you sure you want to delete this order? All items and history will be lost permanently.
+            </p>
+            <div className="form-group">
+              <label>Admin Password</label>
+              <input 
+                type="password" 
+                className="input" 
+                value={deleteOrderPassword}
+                onChange={e => setDeleteOrderPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleDeleteOrder()}
+                placeholder="Enter password"
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions mt-4">
+              <button 
+                className="btn secondary" 
+                onClick={() => { setShowDeleteOrderConfirm(false); setDeleteOrderPassword(""); }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn danger" 
+                onClick={handleDeleteOrder}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

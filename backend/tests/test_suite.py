@@ -225,3 +225,67 @@ def test_delete_delivery(client):
     assert refetch_line["delivered_qty"] == 0
     assert refetch["status"] == "Pending"
 
+def test_order_refresh_master_data(client, db):
+    """
+    Test 6: Refresh Master Data Estimates
+    - Create an order using a size rule
+    - Update the rule's length_required directly in the DB to simulate master data changes
+    - Call POST /orders/{id}/refresh
+    - Verify that order line calculations (material_req_per_unit and total_material_req) are updated
+    """
+    from app import models
+
+    # 1. Setup: get tailor, product, size, and rule
+    tailors = client.get("/master-data/tailors").json()
+    tailor_id = tailors[0]["id"]
+    
+    products = client.get("/master-data/products").json()
+    product = products[0]
+    size = product["sizes"][0]
+    size_id = size["id"]
+    
+    rules = client.get(f"/master-data/sizes/{size_id}/rules").json()
+    assert len(rules) > 0, "Need at least one rule for size"
+    rule_id = rules[0]["id"]
+    original_length = rules[0]["length_required"]
+    
+    # 2. Create order
+    qty = 10
+    payload = {
+        "tailor_id": tailor_id,
+        "order_lines": [
+            {
+                "product_id": product["id"],
+                "size_id": size_id,
+                "quantity": qty,
+                "rule_id": rule_id
+            }
+        ]
+    }
+    
+    response = client.post("/orders/", json=payload)
+    assert response.status_code == 200
+    order = response.json()
+    order_id = order["id"]
+    
+    line = order["order_lines"][0]
+    assert line["material_req_per_unit"] == original_length
+    assert line["total_material_req"] == original_length * qty
+    
+    # 3. Modify rule directly in database to simulate admin updating master data
+    new_length = original_length + 0.5
+    db_rule = db.query(models.MaterialRule).filter(models.MaterialRule.id == rule_id).first()
+    db_rule.length_required = new_length
+    db.commit()
+    
+    # 4. Refresh order estimates from master data
+    refresh_response = client.post(f"/orders/{order_id}/refresh")
+    assert refresh_response.status_code == 200
+    refreshed_order = refresh_response.json()
+    
+    # 5. Verify updated calculations
+    refreshed_line = refreshed_order["order_lines"][0]
+    assert refreshed_line["material_req_per_unit"] == new_length
+    assert refreshed_line["total_material_req"] == new_length * qty
+
+

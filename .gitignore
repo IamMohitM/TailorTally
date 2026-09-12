@@ -4,6 +4,7 @@
 !.vscode/tasks.json
 .idea/
 *.log
+*.pdf
 
 # Python
 __pycache__/

@@ -9,6 +9,7 @@ export default function Navbar() {
       <NavLink to="/" className="nav-link" end>Orders</NavLink>
       <NavLink to="/master-data" className="nav-link">Master Data</NavLink>
       <NavLink to="/dashboard" className="nav-link">Dashboard</NavLink>
+      <NavLink to="/reports" className="nav-link">Reports</NavLink>
       
       <NavLink to="/create-order" className="nav-link btn-new">+ New Order</NavLink>
       <NavLink to="/settings" className="nav-link">Settings</NavLink>

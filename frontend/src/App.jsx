@@ -6,6 +6,7 @@ import CreateOrder from './pages/CreateOrder';
 import MasterData from './pages/MasterData';
 import OrderDetails from './pages/OrderDetails';
 import Dashboard from './pages/Dashboard';
+import Reports from './pages/Reports';
 import AdminSettings from './pages/AdminSettings';
 
 import { NotificationProvider } from './components/Notification';
@@ -19,6 +20,7 @@ function App() {
           <Routes>
             <Route path="/" element={<OrderList />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/reports" element={<Reports />} />
             <Route path="/create-order" element={<CreateOrder />} />
             <Route path="/master-data" element={<MasterData />} />
             <Route path="/orders/:id" element={<OrderDetails />} />
@@ -29,5 +31,6 @@ function App() {
     </NotificationProvider>
   );
 }
+
 
 export default App;

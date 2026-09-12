@@ -41,6 +41,7 @@ def setup_test_db():
         
     yield
     
+    engine.dispose()
     if os.path.exists(TEST_DATABASE_PATH):
         try:
             os.remove(TEST_DATABASE_PATH)

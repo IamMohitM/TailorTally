@@ -40,7 +40,7 @@ if "%PREV_HEAD%" == "%NEW_HEAD%" (
     echo(
     echo Updates received. Checking for file changes...
     
-    git diff --name-only "%PREV_HEAD%" "%NEW_HEAD%" | findstr "backend/pyproject.toml" >nul
+    git diff --name-only "%PREV_HEAD%" "%NEW_HEAD%" | findstr /I "pyproject.toml" >nul
     if !ERRORLEVEL! EQU 0 (
         echo ---------------------------------------
         echo backend/pyproject.toml changed.
@@ -52,7 +52,7 @@ if "%PREV_HEAD%" == "%NEW_HEAD%" (
         cd ..
     )
 
-    git diff --name-only "%PREV_HEAD%" "%NEW_HEAD%" | findstr "frontend/package.json" >nul
+    git diff --name-only "%PREV_HEAD%" "%NEW_HEAD%" | findstr /I "package.json" >nul
     if !ERRORLEVEL! EQU 0 (
         echo ---------------------------------------
         echo frontend/package.json changed.
@@ -65,9 +65,15 @@ if "%PREV_HEAD%" == "%NEW_HEAD%" (
 )
 
 echo ---------------------------------------
-echo Running Schema Updates...
+echo Checking Backend Dependencies & Running Schema Updates...
 cd backend
 call venv\Scripts\activate.bat
+python -c "import reportlab" >nul 2>&1
+if !ERRORLEVEL! NEQ 0 (
+    echo Missing backend dependencies detected ^(e.g. reportlab^).
+    echo Installing backend dependencies...
+    call pip install .
+)
 python scripts/update_schema.py
 cd ..
 echo Schema Updates Completed.

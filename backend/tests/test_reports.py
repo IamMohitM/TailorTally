@@ -122,3 +122,84 @@ def test_cloth_tally_report_structure(client, db):
     data_tailor = response_tailor.json()
     assert len(data_tailor["tailor_summaries"]) == 1
     assert data_tailor["tailor_summaries"][0]["tailor_id"] == tailor.id
+
+    # 6. Test PDF report download endpoint
+    response_pdf = client.get("/reports/cloth-tally/pdf")
+    assert response_pdf.status_code == 200
+    assert response_pdf.headers["content-type"] == "application/pdf"
+    assert "attachment; filename=" in response_pdf.headers.get("content-disposition", "")
+    assert len(response_pdf.content) > 500
+    assert response_pdf.content.startswith(b"%PDF")
+
+    # 7. Test PDF report with filters (school, tailor, date range)
+    response_pdf_filt = client.get(f"/reports/cloth-tally/pdf?school_id={school_a.id}&tailor_id={tailor.id}&start_date=2026-03-01&end_date=2026-03-05")
+    assert response_pdf_filt.status_code == 200
+    assert response_pdf_filt.headers["content-type"] == "application/pdf"
+    assert len(response_pdf_filt.content) > 500
+    assert response_pdf_filt.content.startswith(b"%PDF")
+
+    # 8. Test PDF report with empty / non-matching results
+    response_pdf_empty = client.get("/reports/cloth-tally/pdf?start_date=2020-01-01&end_date=2020-01-02")
+    assert response_pdf_empty.status_code == 200
+    assert response_pdf_empty.headers["content-type"] == "application/pdf"
+    assert len(response_pdf_empty.content) > 500
+    assert response_pdf_empty.content.startswith(b"%PDF")
+
+
+def test_hashlib_compat_usedforsecurity_rejection():
+    """Verify that hashlib_compat gracefully handles Python 3.8 / OpenSSL builds that reject usedforsecurity."""
+    import hashlib
+    from app import hashlib_compat
+
+    # Force patch re-application
+    hashlib_compat.apply_hashlib_compat_patch()
+
+    # Calling with usedforsecurity=False should succeed and return a valid hash
+    h = hashlib.md5(b"test data", usedforsecurity=False)
+    assert h.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
+
+    # Test simulating an underlying function that raises TypeError on usedforsecurity
+    orig_fn = hashlib.md5
+    calls = []
+
+    def mock_broken(*args, **kwargs):
+        calls.append(kwargs.copy())
+        if "usedforsecurity" in kwargs:
+            raise TypeError("usedforsecurity is an invalid keyword argument for openssl_md5()")
+        return orig_fn(*args, **kwargs)
+
+    safe_fn = hashlib_compat._make_safe(mock_broken)
+    result = safe_fn(b"test data", usedforsecurity=False)
+    assert result.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
+    assert len(calls) == 2  # First called with usedforsecurity, then retried without it
+
+
+def test_pdf_generation_under_simulated_python38_windows(client):
+    """
+    Simulates the exact runtime environment of a remote Windows machine running Python 3.8 / OpenSSL
+    where hashlib.md5 raises TypeError when called with usedforsecurity=False.
+    Verifies that the PDF endpoint succeeds and returns valid PDF binary data without crashing.
+    """
+    import hashlib
+    from app import hashlib_compat
+
+    real_md5 = hashlib.md5
+
+    def broken_windows_py38_md5(*args, **kwargs):
+        if "usedforsecurity" in kwargs:
+            raise TypeError("usedforsecurity is an invalid keyword argument for openssl_md5()")
+        return real_md5(*args, **kwargs)
+
+    # Wrap the simulated broken function with our compatibility wrapper
+    hashlib.md5 = hashlib_compat._make_safe(broken_windows_py38_md5)
+
+    try:
+        response = client.get("/reports/cloth-tally/pdf")
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/pdf"
+        assert response.content.startswith(b"%PDF")
+        assert len(response.content) > 500
+    finally:
+        # Restore real md5
+        hashlib.md5 = real_md5
+        hashlib_compat.apply_hashlib_compat_patch()

@@ -1,3 +1,4 @@
+from . import hashlib_compat  # noqa: F401
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base

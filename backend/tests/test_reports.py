@@ -154,24 +154,51 @@ def test_hashlib_compat_usedforsecurity_rejection():
     # Force patch re-application
     hashlib_compat.apply_hashlib_compat_patch()
 
-    # Calling with usedforsecurity=False should succeed and return a valid hash
-    h = hashlib.md5(b"test data", usedforsecurity=False)
-    assert h.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
+    # Calling with data and usedforsecurity=False should succeed and return a valid hash
+    h1 = hashlib.md5(b"test data", usedforsecurity=False)
+    assert h1.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
 
-    # Test simulating an underlying function that raises TypeError on usedforsecurity
+    # Calling without data (empty init) and usedforsecurity=False should also succeed
+    h2 = hashlib.md5(usedforsecurity=False)
+    h2.update(b"test data")
+    assert h2.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
+
+    # Calling sha1/sha256 with usedforsecurity=False
+    h_sha = hashlib.sha1(b"test data", usedforsecurity=False)
+    assert h_sha.hexdigest() == "f48dd853820860816c75d54d0f584dc863327a7c"
+
+    # Invalid type should still raise TypeError even when usedforsecurity is passed
+    with pytest.raises(TypeError):
+        hashlib.md5(12345, usedforsecurity=False)
+
+    # Test simulating an underlying function raising keyword argument rejection
     orig_fn = hashlib.md5
-    calls = []
+    calls_kw = []
 
-    def mock_broken(*args, **kwargs):
-        calls.append(kwargs.copy())
+    def mock_kw_broken(*args, **kwargs):
+        calls_kw.append(kwargs.copy())
         if "usedforsecurity" in kwargs:
             raise TypeError("usedforsecurity is an invalid keyword argument for openssl_md5()")
         return orig_fn(*args, **kwargs)
 
-    safe_fn = hashlib_compat._make_safe(mock_broken)
-    result = safe_fn(b"test data", usedforsecurity=False)
-    assert result.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
-    assert len(calls) == 2  # First called with usedforsecurity, then retried without it
+    safe_fn_kw = hashlib_compat._make_safe(mock_kw_broken)
+    result_kw = safe_fn_kw(b"test data", usedforsecurity=False)
+    assert result_kw.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
+    assert len(calls_kw) == 2
+
+    # Test simulating C-level argument count error in Python 3.8
+    calls_argcount = []
+
+    def mock_argcount_broken(*args, **kwargs):
+        calls_argcount.append(kwargs.copy())
+        if "usedforsecurity" in kwargs:
+            raise TypeError("openssl_md5() takes at most 1 argument (2 given)")
+        return orig_fn(*args, **kwargs)
+
+    safe_fn_argcount = hashlib_compat._make_safe(mock_argcount_broken)
+    result_argcount = safe_fn_argcount(b"test data", usedforsecurity=False)
+    assert result_argcount.hexdigest() == "eb733a00c0c9d336e65691a37ab54293"
+    assert len(calls_argcount) == 2
 
 
 def test_pdf_generation_under_simulated_python38_windows(client):

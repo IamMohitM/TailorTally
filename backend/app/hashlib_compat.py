@@ -13,24 +13,42 @@ import hashlib
 
 
 def _make_safe(fn):
+    if getattr(fn, "_is_hashlib_compat_safe", False):
+        return fn
+
     def wrapper(*args, **kwargs):
-        try:
-            return fn(*args, **kwargs)
-        except TypeError as err:
-            if "usedforsecurity" in str(err):
-                kwargs.pop("usedforsecurity", None)
+        if "usedforsecurity" in kwargs:
+            try:
                 return fn(*args, **kwargs)
-            raise
+            except TypeError:
+                kwargs_copy = dict(kwargs)
+                kwargs_copy.pop("usedforsecurity", None)
+                return fn(*args, **kwargs_copy)
+        return fn(*args, **kwargs)
+
+    try:
+        wrapper._is_hashlib_compat_safe = True
+    except (AttributeError, TypeError):
+        pass
+
     return wrapper
 
 
+_ALGORITHMS = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
+
+
 def apply_hashlib_compat_patch():
-    hashlib.md5 = _make_safe(hashlib.md5)
-    hashlib.new = _make_safe(hashlib.new)
+    for algo in _ALGORITHMS:
+        if hasattr(hashlib, algo):
+            setattr(hashlib, algo, _make_safe(getattr(hashlib, algo)))
+    if hasattr(hashlib, "new"):
+        hashlib.new = _make_safe(hashlib.new)
     try:
         import _hashlib
-        if hasattr(_hashlib, "openssl_md5"):
-            _hashlib.openssl_md5 = _make_safe(_hashlib.openssl_md5)
+        for algo in _ALGORITHMS:
+            name = f"openssl_{algo}"
+            if hasattr(_hashlib, name):
+                setattr(_hashlib, name, _make_safe(getattr(_hashlib, name)))
         if hasattr(_hashlib, "new"):
             _hashlib.new = _make_safe(_hashlib.new)
     except (ImportError, AttributeError):

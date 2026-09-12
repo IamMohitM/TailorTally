@@ -20,13 +20,19 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+def cleanup_test_db():
+    engine.dispose()
+    for ext in ["", "-wal", "-shm", "-journal"]:
+        p = TEST_DATABASE_PATH + ext
+        if os.path.exists(p):
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    if os.path.exists(TEST_DATABASE_PATH):
-        try:
-            os.remove(TEST_DATABASE_PATH)
-        except:
-            pass
+    cleanup_test_db()
             
     Base.metadata.create_all(bind=engine)
     
@@ -41,12 +47,7 @@ def setup_test_db():
         
     yield
     
-    engine.dispose()
-    if os.path.exists(TEST_DATABASE_PATH):
-        try:
-            os.remove(TEST_DATABASE_PATH)
-        except:
-            pass
+    cleanup_test_db()
 
 @pytest.fixture(scope="function")
 def db():

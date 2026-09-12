@@ -10,6 +10,7 @@ const PrintableOrder = ({ order }) => {
         <h1>Order #{order.id}</h1>
         <div className="meta-info">
           <div><strong>Tailor:</strong> {order.tailor_name}</div>
+          <div><strong>Slip No:</strong> {order.slip_no || '-'}</div>
           <div><strong>Status:</strong> {order.status}</div>
           <div><strong>Printed On:</strong> {new Date().toLocaleString()}</div>
         </div>

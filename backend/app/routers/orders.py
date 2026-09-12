@@ -6,6 +6,8 @@ from ..database import get_db
 from ..database import get_db
 from datetime import datetime
 from ..utils.email_utils import send_order_email
+from fastapi import Header
+from ..utils.security import verify_password
 
 router = APIRouter(
     prefix="/orders",
@@ -14,11 +16,16 @@ router = APIRouter(
 
 @router.post("/", response_model=schemas.Order)
 def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
-    # Create Order
+    # Verify Tailor exists
+    tailor = db.query(models.Tailor).filter(models.Tailor.id == order.tailor_id).first()
+    if not tailor:
+        raise HTTPException(status_code=400, detail="Tailor not found")
+
     db_order = models.Order(
         tailor_id=order.tailor_id, 
         # school_id=order.school_id, # REMOVED 
         notes=order.notes,
+        slip_no=order.slip_no,
         created_at=order.created_at or datetime.utcnow()
     )
     db.add(db_order)
@@ -52,7 +59,9 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
             material_req_per_unit=material_req,
             unit=rule.unit,
             quantity=line.quantity,
-            total_material_req=total_req
+            total_material_req=total_req,
+            group_id=line.group_id,
+            given_cloth=line.given_cloth
         )
         db.add(db_line)
     
@@ -64,7 +73,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
         # Check explicit flag AND presence of email
         if order.send_email and db_order.tailor.email:
             order_response = map_order_response(db_order)
-            send_order_email(db_order.tailor.email, order_response.dict())
+            send_order_email(db_order.tailor.email, order_response.model_dump())
     except Exception as e:
         print(f"Failed to send email: {e}")
 
@@ -86,9 +95,11 @@ def list_orders(
         if search.isdigit():
              query = query.filter(models.Order.id == int(search))
         else:
-             # Search by tailor name
-             # Join with Tailor table to filter by name
-             query = query.join(models.Tailor).filter(models.Tailor.name.ilike(f"%{search}%"))
+             # Search by tailor name or slip number
+             query = query.join(models.Tailor).filter(
+                 (models.Tailor.name.ilike(f"%{search}%")) |
+                 (models.Order.slip_no.ilike(f"%{search}%"))
+             )
 
     # 3. Filter by School (Check if any line has this school)
     if school_id:
@@ -174,6 +185,262 @@ def record_delivery(line_id: int, delivery: schemas.DeliveryCreate, db: Session 
     
     return db_delivery
 
+@router.put("/{order_id}", response_model=schemas.Order)
+def update_order(
+    order_id: int, 
+    update_data: schemas.OrderUpdate, 
+    x_admin_password: str = Header(None, alias="X-Admin-Password"),
+    db: Session = Depends(get_db)
+):
+    # Verify Admin Password
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    updates = update_data.model_dump(exclude_unset=True)
+    
+    if "tailor_id" in updates:
+        db_order.tailor_id = updates["tailor_id"]
+    if "notes" in updates:
+        db_order.notes = updates["notes"]
+    if "slip_no" in updates:
+        db_order.slip_no = updates["slip_no"]
+    if "status" in updates:
+        db_order.status = updates["status"]
+    if "created_at" in updates:
+        db_order.created_at = updates["created_at"]
+
+    db.commit()
+    db.refresh(db_order)
+    return map_order_response(db_order)
+
+@router.put("/lines/{line_id}", response_model=schemas.OrderLine)
+def update_order_line(
+    line_id: int, 
+    update_data: schemas.OrderLineUpdate, 
+    x_admin_password: str = Header(None, alias="X-Admin-Password"),
+    db: Session = Depends(get_db)
+):
+    # Verify Admin Password
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    db_line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
+    if not db_line:
+        raise HTTPException(status_code=404, detail="Order Line not found")
+
+    # If any essential field is changed, we may need to recalculate material reqs
+    # Fields that affect material: product_id (via size?), size_id, fabric_width_inches, rule_id
+    # If quantity changes, total_req changes.
+
+    # 1. Update simple fields using __fields_set__ to allow unsetting (setting to None)
+    # Using model_dump(exclude_unset=True) is also an option in Pydantic v2, or .dict(exclude_unset=True) in v1
+    # But checking __fields_set__ is explicit.
+    
+    updates = update_data.model_dump(exclude_unset=True)
+    
+    if "school_id" in updates:
+        db_line.school_id = updates["school_id"]
+        
+    if "group_id" in updates:
+        db_line.group_id = updates["group_id"]
+        
+    if "given_cloth" in updates:
+        db_line.given_cloth = updates["given_cloth"]
+    
+    recalc_needed = False
+    
+    # Check if we need to find a new rule
+    new_size_id = updates.get("size_id", db_line.size_id)
+    new_fabric_width = updates.get("fabric_width_inches", db_line.fabric_width_inches)
+    
+    # Note: rule_id isn't stored on db_line, but used to find the rule initially. 
+    if ("size_id" in updates or 
+        "fabric_width_inches" in updates or 
+        "rule_id" in updates):
+        
+        # Find new rule
+        if updates.get("rule_id"):
+            rule = db.query(models.MaterialRule).filter(models.MaterialRule.id == updates["rule_id"]).first()
+        else:
+            query = db.query(models.MaterialRule).filter(models.MaterialRule.size_id == new_size_id)
+            if new_fabric_width:
+                rule = query.filter(models.MaterialRule.fabric_width_inches == new_fabric_width).first()
+            else:
+                rule = query.first() # Default or only rule
+        
+        if not rule:
+             raise HTTPException(status_code=400, detail=f"No material rule found for Size ID {new_size_id}")
+             
+        db_line.material_req_per_unit = rule.length_required
+        db_line.unit = rule.unit
+        recalc_needed = True
+
+    if "product_id" in updates:
+        db_line.product_id = updates["product_id"]
+    
+    if "size_id" in updates:
+        db_line.size_id = updates["size_id"]
+        
+    if "fabric_width_inches" in updates:
+        db_line.fabric_width_inches = updates["fabric_width_inches"]
+
+    if "quantity" in updates:
+        db_line.quantity = updates["quantity"]
+        recalc_needed = True
+        
+    if recalc_needed:
+        db_line.total_material_req = db_line.quantity * db_line.material_req_per_unit
+
+    db.commit()
+    db.refresh(db_line)
+    
+    # Re-map manually because db_line is just an OrderLine object, but we want the schema with computed fields
+    # actually schemas.OrderLine needs relationships loaded. db_line has them lazy loaded usually.
+    # We can perform a quick mapping similar to map_order_response or just return it and let Pydantic handle it 
+    # IF the attributes are available. The 'deliveries' rel is there. 
+    # But schemas.OrderLine has computed fields pending_qty etc.
+    # We can reuse the logic from map_order_response but scoped to one line.
+    
+    delivered = sum(d.quantity_delivered for d in db_line.deliveries)
+    pending = db_line.quantity - delivered
+    
+    return schemas.OrderLine(
+        id=db_line.id,
+        order_id=db_line.order_id,
+        product_id=db_line.product_id,
+        size_id=db_line.size_id,
+        product_name=db_line.product.name if db_line.product else f"Product #{db_line.product_id}",
+        size_label=db_line.size.label if db_line.size else f"Size #{db_line.size_id}",
+        school_id=db_line.school_id,
+        school_name=db_line.school.name if db_line.school else None,
+        fabric_width_inches=db_line.fabric_width_inches,
+        quantity=db_line.quantity,
+        material_req_per_unit=db_line.material_req_per_unit,
+        unit=db_line.unit,
+        total_material_req=db_line.total_material_req,
+        delivered_qty=delivered,
+        pending_qty=pending,
+        group_id=db_line.group_id,
+        given_cloth=db_line.given_cloth,
+        deliveries=db_line.deliveries
+    )
+
+@router.delete("/{order_id}")
+def delete_order(order_id: int, x_admin_password: str = Header(None, alias="X-Admin-Password"), db: Session = Depends(get_db)):
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    db.delete(order)
+    db.commit()
+    return {"message": "Order deleted"}
+
+@router.delete("/lines/{line_id}")
+def delete_order_line(line_id: int, x_admin_password: str = Header(None, alias="X-Admin-Password"), db: Session = Depends(get_db)):
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    db_line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
+    if not db_line:
+        raise HTTPException(status_code=404, detail="Order Line not found")
+        
+    db.delete(db_line)
+    db.commit()
+    return {"message": "Order line deleted"}
+
+@router.delete("/deliveries/{delivery_id}")
+def delete_delivery(delivery_id: int, x_admin_password: str = Header(None, alias="X-Admin-Password"), db: Session = Depends(get_db)):
+    if not x_admin_password:
+        raise HTTPException(status_code=401, detail="Admin password required")
+    
+    setting = db.query(models.Settings).filter(models.Settings.key == "admin_password").first()
+    if not setting or not verify_password(x_admin_password, setting.value):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    delivery = db.query(models.Delivery).filter(models.Delivery.id == delivery_id).first()
+    if not delivery:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+        
+    line_id = delivery.order_line_id
+    db.delete(delivery)
+    db.commit()
+
+    # Update Order Status
+    line = db.query(models.OrderLine).filter(models.OrderLine.id == line_id).first()
+    if line:
+        order = db.query(models.Order).filter(models.Order.id == line.order_id).first()
+        if order:
+            db.refresh(order)
+            all_completed = True
+            any_delivered = False
+            
+            for ol in order.order_lines:
+                db.refresh(ol) 
+                d_qty = sum(d.quantity_delivered for d in ol.deliveries)
+                if d_qty > 0:
+                    any_delivered = True
+                if d_qty < ol.quantity:
+                    all_completed = False
+            
+            new_status = order.status
+            if all_completed and len(order.order_lines) > 0:
+                new_status = "Completed"
+            elif any_delivered:
+                new_status = "In Progress"
+            else:
+                new_status = "Pending"
+            
+            if new_status != order.status:
+                order.status = new_status
+                db.commit()
+
+    return {"message": "Delivery deleted"}
+
+@router.post("/{order_id}/refresh", response_model=schemas.Order)
+def refresh_order_master_data(order_id: int, db: Session = Depends(get_db)):
+    db_order = db.query(models.Order).filter(models.Order.id == order_id).first()
+    if not db_order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    for line in db_order.order_lines:
+        query = db.query(models.MaterialRule).filter(models.MaterialRule.size_id == line.size_id)
+        if line.fabric_width_inches:
+            rule = query.filter(models.MaterialRule.fabric_width_inches == line.fabric_width_inches).first()
+        else:
+            rule = query.first()
+
+        if rule:
+            line.material_req_per_unit = rule.length_required
+            line.unit = rule.unit
+            line.total_material_req = line.quantity * rule.length_required
+
+    db.commit()
+    db.refresh(db_order)
+    return map_order_response(db_order)
+
 def map_order_response(order: models.Order) -> schemas.Order:
     # Helper to calculate delivered/pending quantities for response
     mapped_lines = []
@@ -196,6 +463,8 @@ def map_order_response(order: models.Order) -> schemas.Order:
             total_material_req=line.total_material_req,
             delivered_qty=delivered,
             pending_qty=pending,
+            group_id=line.group_id,
+            given_cloth=line.given_cloth,
             deliveries=line.deliveries
         ))
 
@@ -208,5 +477,6 @@ def map_order_response(order: models.Order) -> schemas.Order:
         status=order.status,
         created_at=order.created_at,
         notes=order.notes,
+        slip_no=order.slip_no,
         order_lines=mapped_lines
     )

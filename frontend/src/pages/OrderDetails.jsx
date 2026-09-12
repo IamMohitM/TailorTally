@@ -1,21 +1,36 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../api';
 import { formatDate } from '../utils';
+import { useNotification } from '../components/Notification';
 
 import PrintableOrder from '../components/PrintableOrder';
 
 export default function OrderDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [masterData, setMasterData] = useState({ products: [], schools: [] });
+  
+  // Order Meta Edit State
+  const [isEditingMeta, setIsEditingMeta] = useState(false);
+  const [showMetaEditConfirm, setShowMetaEditConfirm] = useState(false);
+  const [metaEditPassword, setMetaEditPassword] = useState("");
+  const [metaEditData, setMetaEditData] = useState({ slip_no: "", notes: "" });
+  const [refreshing, setRefreshing] = useState(false);
+  const [showDeleteOrderConfirm, setShowDeleteOrderConfirm] = useState(false);
+  const [deleteOrderPassword, setDeleteOrderPassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const { showToast } = useNotification();
 
   useEffect(() => {
     loadOrder();
+    loadMasterData();
   }, [id]);
 
   async function loadOrder() {
-    setLoading(true);
+    // setLoading(true); // Don't block UI if just refreshing
     try {
       const data = await fetchAPI(`/orders/${id}`);
       setOrder(data);
@@ -26,9 +41,189 @@ export default function OrderDetails() {
     }
   }
 
+  async function loadMasterData() {
+      try {
+          const [products, schools] = await Promise.all([
+             fetchAPI('/master-data/products').catch(() => []), 
+             fetchAPI('/schools').catch(() => [])
+          ]);
+          setMasterData({ products, schools });
+      } catch (e) {
+          console.error("Failed to load master data", e);
+      }
+  }
+
   const handlePrint = () => {
     window.print();
   };
+
+  const [authorizedPasswordForMeta, setAuthorizedPasswordForMeta] = useState(null);
+
+  async function handleVerifyMetaEditPassword() {
+    if (!metaEditPassword) {
+      showToast("Please enter the admin password", "error");
+      return;
+    }
+    try {
+      const isVerified = await fetchAPI('/admin/verify-password', {
+        method: 'POST',
+        body: JSON.stringify({ password: metaEditPassword })
+      });
+      if (isVerified) {
+        setAuthorizedPasswordForMeta(metaEditPassword);
+        setIsEditingMeta(true);
+        setMetaEditData({ slip_no: order.slip_no || "", notes: order.notes || "" });
+        setShowMetaEditConfirm(false);
+        setMetaEditPassword("");
+      } else {
+        showToast("Invalid admin password", "error");
+      }
+    } catch (e) {
+      showToast("Verification failed", "error");
+    }
+  }
+
+  async function handleSaveMeta() {
+    try {
+      await fetchAPI(`/orders/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(metaEditData),
+        headers: { 'X-Admin-Password': authorizedPasswordForMeta }
+      });
+      setIsEditingMeta(false);
+      setAuthorizedPasswordForMeta(null);
+      showToast("Order updated successfully", "success");
+      loadOrder();
+    } catch (e) {
+      showToast("Failed to update order: " + e.message, "error");
+    }
+  }
+
+  async function handleRefreshEstimates() {
+    try {
+      setRefreshing(true);
+      const updatedOrder = await fetchAPI(`/orders/${id}/refresh`, {
+        method: 'POST'
+      });
+      setOrder(updatedOrder);
+      showToast("Estimates updated from master data successfully", "success");
+    } catch (e) {
+      console.error(e);
+      showToast("Failed to refresh estimates: " + e.message, "error");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  async function handleDeleteOrder() {
+    if (!deleteOrderPassword) {
+      showToast("Please enter the admin password", "error");
+      return;
+    }
+    try {
+      setDeleting(true);
+      await fetchAPI(`/orders/${id}`, {
+        method: 'DELETE',
+        headers: { 'X-Admin-Password': deleteOrderPassword }
+      });
+      showToast("Order deleted successfully", "success");
+      setShowDeleteOrderConfirm(false);
+      setDeleteOrderPassword("");
+      navigate('/');
+    } catch (e) {
+      showToast("Failed to delete order: " + e.message, "error");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  // Grouping Logic
+  const processedLines = useMemo(() => {
+      if (!order || !order.order_lines) return [];
+      
+      // 1. Sort lines to ensure groups are contiguous
+      // Primary Sort: Product Name, Secondary: School Name
+      const sortedLines = [...order.order_lines].sort((a, b) => {
+          const pDiff = a.product_name.localeCompare(b.product_name);
+          if (pDiff !== 0) return pDiff;
+          const sA = a.school_name || "";
+          const sB = b.school_name || "";
+          const sDiff = sA.localeCompare(sB);
+          if (sDiff !== 0) return sDiff;
+          
+          // Tie-breakers for stable sorting: Size, then ID
+          if (a.size_id !== b.size_id) return a.size_id - b.size_id;
+          return a.id - b.id;
+      });
+
+      // 2. Metadata for grouping
+      const result = [];
+      let currentGroupKey = null;
+      let currentGroupStartIndex = 0;
+
+      // Temporary holder for group stats
+      let groupStatsMap = new Map(); 
+
+      // First pass to determine groups and basic stats
+      for (let i = 0; i < sortedLines.length; i++) {
+          const line = sortedLines[i];
+          // Key: Product + School + Unit + FabricWidth (to be safe if mixed units/widths usually shouldn't happen for same product but technically possible)
+          const key = `${line.product_id}|${line.school_id}|${line.unit}`; // Ignored fabric width for loose visual grouping, can add if strictly needed
+          
+          if (key !== currentGroupKey) {
+              // New Group
+              if (currentGroupKey !== null) {
+                  // Finalize previous group
+                  const groupSize = i - currentGroupStartIndex;
+                  result[currentGroupStartIndex].rowSpan = groupSize;
+                  result[currentGroupStartIndex].groupStats = groupStatsMap.get(currentGroupKey);
+              }
+              
+              currentGroupKey = key;
+              currentGroupStartIndex = i;
+              
+              // Initialize stats for new group
+              groupStatsMap.set(key, {
+                  totalGiven: 0,
+                  totalEst: 0,
+                  hasGiven: false
+              });
+          }
+
+          // Accumulate stats
+          const stats = groupStatsMap.get(key);
+          if (line.given_cloth != null) {
+              stats.hasGiven = true;
+              stats.totalGiven += parseFloat(line.given_cloth);
+          }
+           // Use total_material_req if available, else calc
+          const est = line.total_material_req || (line.quantity * line.material_req_per_unit);
+          stats.totalEst += est;
+          
+          // Add line to result with default props
+          result.push({
+              ...line,
+              rowSpan: 0, // 0 means hidden, >0 means spans
+              isGroupStart: false, // Will mark true for start
+              groupStats: null // Will attach to start
+          });
+      }
+
+      // Finalize last group
+      if (currentGroupStartIndex < sortedLines.length) {
+          const groupSize = sortedLines.length - currentGroupStartIndex;
+          result[currentGroupStartIndex].rowSpan = groupSize;
+          result[currentGroupStartIndex].groupStats = groupStatsMap.get(currentGroupKey);
+      }
+      
+      if (result.length > 0) {
+          // Mark group starts explicitly if rowSpan > 0 (already set above)
+           // Actually, the loop set rowSpan on `result` objects at specific indices.
+           // We just need to make sure `isGroupStart` is consistent or just check rowSpan.
+      }
+
+      return result;
+  }, [order]);
 
   if (loading) return <div>Loading...</div>;
   if (!order) return <div>Order not found</div>;
@@ -38,13 +233,132 @@ export default function OrderDetails() {
       <div className="no-print flex justify-between items-center" style={{marginBottom: '1rem'}}>
         <div>
             <h1>Order #{order.id}</h1>
-            <div style={{ color: '#666' }}>Tailor: {order.tailor_name} | Status: {order.status}</div>
+            <div style={{ color: '#666', display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <span>Tailor: {order.tailor_name}</span>
+              <span>|</span>
+              <span>Status: {order.status}</span>
+              <span>|</span>
+              <span>Slip No: <strong>{order.slip_no || '-'}</strong></span>
+              {!isEditingMeta && (
+                <button 
+                  className="btn secondary" 
+                  style={{ padding: '0.1rem 0.5rem', fontSize: '0.75rem' }}
+                  onClick={() => setShowMetaEditConfirm(true)}
+                >
+                  Edit Slip/Notes
+                </button>
+              )}
+            </div>
         </div>
         <div className="flex gap-2">
+            <button 
+                className="btn secondary" 
+                onClick={handleRefreshEstimates} 
+                disabled={refreshing}
+            >
+                {refreshing ? 'Refreshing...' : 'Refresh Estimates'}
+            </button>
             <button className="btn" onClick={handlePrint}>Print / Save PDF</button>
-            <Link to="/" className="btn" style={{background: '#6b7280'}}>Back to List</Link>
+            <button 
+                className="btn danger" 
+                onClick={() => setShowDeleteOrderConfirm(true)}
+            >
+                Delete Order
+            </button>
         </div>
       </div>
+
+      {isEditingMeta && (
+        <div className="card no-print" style={{ background: '#fff7ed', border: '1px solid #fdba74', marginBottom: '1rem' }}>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label>Slip No.</label>
+              <input 
+                type="text" 
+                className="input" 
+                value={metaEditData.slip_no} 
+                onChange={e => setMetaEditData({ ...metaEditData, slip_no: e.target.value })}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: 0, flex: 1 }}>
+              <label>Notes</label>
+              <input 
+                type="text" 
+                className="input" 
+                value={metaEditData.notes} 
+                onChange={e => setMetaEditData({ ...metaEditData, notes: e.target.value })}
+              />
+            </div>
+            <div className="flex gap-2">
+              <button className="btn success" onClick={handleSaveMeta}>Save</button>
+              <button className="btn secondary" onClick={() => { setIsEditingMeta(false); setAuthorizedPasswordForMeta(null); }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMetaEditConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 300 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <h3 className="modal-title">Edit Order Details</h3>
+            <p className="modal-message mb-4">Enter admin password to edit Slip No. or Notes.</p>
+            <div className="form-group">
+              <label>Admin Password</label>
+              <input 
+                type="password" 
+                className="input" 
+                value={metaEditPassword}
+                onChange={e => setMetaEditPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleVerifyMetaEditPassword()}
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions mt-4">
+              <button className="btn secondary" onClick={() => { setShowMetaEditConfirm(false); setMetaEditPassword(""); }}>Cancel</button>
+              <button className="btn success" onClick={handleVerifyMetaEditPassword}>Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteOrderConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 300 }}>
+          <div className="modal-content" style={{ maxWidth: '400px' }}>
+            <h3 className="modal-title">Delete Order #{order.id}</h3>
+            <p className="modal-message mb-4">
+              Are you sure you want to delete this order? All items and history will be lost permanently.
+            </p>
+            <div className="form-group">
+              <label>Admin Password</label>
+              <input 
+                type="password" 
+                className="input" 
+                value={deleteOrderPassword}
+                onChange={e => setDeleteOrderPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleDeleteOrder()}
+                placeholder="Enter password"
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions mt-4">
+              <button 
+                className="btn secondary" 
+                onClick={() => { setShowDeleteOrderConfirm(false); setDeleteOrderPassword(""); }}
+                disabled={deleting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn danger" 
+                onClick={handleDeleteOrder}
+                disabled={deleting}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="no-print card">
         <h3>Items</h3>
@@ -64,8 +378,13 @@ export default function OrderDetails() {
                 </tr>
             </thead>
             <tbody>
-                {order.order_lines.map(line => (
-                   <OrderLineRow key={line.id} line={line} onUpdate={loadOrder} />
+                {processedLines.map((line, index) => (
+                   <OrderLineRow 
+                       key={line.id} 
+                       line={line} 
+                       onUpdate={loadOrder} 
+                       masterData={masterData}
+                   />
                 ))}
             </tbody>
         </table>
@@ -78,13 +397,133 @@ export default function OrderDetails() {
 
 
 
-function OrderLineRow({ line, onUpdate }) {
+function OrderLineRow({ line, onUpdate, masterData }) {
+    const { showToast } = useNotification();
     const isCompleted = line.pending_qty <= 0;
     const [deliveryQty, setDeliveryQty] = useState("");
-    // Default to today's date in YYYY-MM-DD format for the input
     const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
     const [recording, setRecording] = useState(false);
     const [showHistory, setShowHistory] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
+    const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+    const [deletePassword, setDeletePassword] = useState("");
+    
+    // Edit Mode State
+    const [isEditing, setIsEditing] = useState(false);
+    const [showEditConfirm, setShowEditConfirm] = useState(false);
+    const [editPassword, setEditPassword] = useState("");
+    const [authorizedPassword, setAuthorizedPassword] = useState(null); // Store verified password
+    const [editData, setEditData] = useState({});
+
+    // Material In Hand Calculation (Fallback if no stats)
+    const materialInHand = (line.pending_qty * line.material_req_per_unit).toFixed(2);
+
+    // Close menu on click outside
+    useEffect(() => {
+        const closeMenu = () => setShowMenu(false);
+        if (showMenu) {
+            document.addEventListener('click', closeMenu);
+        }
+        return () => document.removeEventListener('click', closeMenu);
+    }, [showMenu]);
+
+    function startEdit() {
+        setEditData({
+            product_id: line.product_id,
+            school_id: line.school_id || null, // Ensure null if not set, not empty string
+            size_id: line.size_id,
+            quantity: line.quantity,
+            fabric_width_inches: line.fabric_width_inches,
+            given_cloth: line.given_cloth // ensure this is preserved/editable
+        });
+        // Prompt for password
+        setShowEditConfirm(true);
+    }
+    
+    async function handleVerifyEditPassword() {
+        if (!editPassword) {
+            showToast("Please enter the admin password", "error");
+            return;
+        }
+        
+        try {
+            // Verify Password
+            const isVerified = await fetchAPI('/admin/verify-password', {
+                method: 'POST',
+                body: JSON.stringify({ password: editPassword })
+            });
+
+            if (isVerified) {
+                setAuthorizedPassword(editPassword); // Store for Save action
+                setShowEditConfirm(false);
+                setEditPassword("");
+                setIsEditing(true);
+            } else {
+                 showToast("Invalid admin password", "error");
+            }
+        } catch (e) {
+             showToast("Password verification failed: " + e.message, "error");
+        }
+    }
+
+    async function handleSave() {
+        try {
+            await fetchAPI(`/orders/lines/${line.id}`, {
+                method: 'PUT',
+                body: JSON.stringify(editData),
+                headers: {
+                    'X-Admin-Password': authorizedPassword
+                }
+            });
+            setIsEditing(false);
+            setAuthorizedPassword(null); // Clear password after save for security (optional)
+            onUpdate();
+        } catch (e) {
+            console.error("Update failed", e);
+            alert("Failed to update line: " + (e.message || JSON.stringify(e)));
+        }
+    }
+
+    async function handleDeleteConfirmed() {
+        if (!deletePassword) {
+            showToast("Please enter the admin password", "error");
+            return;
+        }
+
+        try {
+            await fetchAPI(`/orders/lines/${line.id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': deletePassword
+                }
+            });
+            setShowConfirmDelete(false);
+            setDeletePassword(""); // Reset
+            showToast("Item deleted", "success");
+            onUpdate();
+        } catch (e) {
+            showToast("Failed to delete line: " + e.message, "error");
+        }
+    }
+
+    async function handleDeleteDelivery(deliveryId) {
+        if (!window.confirm("Are you sure you want to delete this delivery log?")) {
+            return;
+        }
+
+        try {
+            await fetchAPI(`/orders/deliveries/${deliveryId}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-Admin-Password': authorizedPassword
+                }
+            });
+            showToast("Delivery deleted", "success");
+            onUpdate();
+        } catch (e) {
+            showToast("Failed to delete delivery: " + e.message, "error");
+        }
+    }
 
     async function handleDelivery() {
         if (!deliveryQty || parseInt(deliveryQty) <= 0) return;
@@ -104,56 +543,309 @@ function OrderLineRow({ line, onUpdate }) {
         }
     }
 
-    // Column Calculations
-    const materialInHand = (line.pending_qty * line.material_req_per_unit).toFixed(2);
+    // Helpers for Edit Mode
+    const selectedProduct = masterData.products.find(p => p.id == editData.product_id);
+    const availableSizes = selectedProduct ? selectedProduct.sizes : [];
+
+    // --- RENDER LOGIC for GROUPING ---
+    const isGroupStart = line.rowSpan > 0;
+    const isHidden = line.rowSpan === 0;
+
+    if (isEditing) {
+        // When editing, we might break the table layout if we don't handle rowSpan.
+        // Ideally editing should be a modal or handle spans carefully.
+        // For simplicity, if editing, we force render standard cells (might glitch layout momentarily, or we can just render as single row)
+        // Let's render as a single row that basically overlays or replaces.
+        // BUT, since we have rowSpan in other rows, replacing just one <tr> might misalign columns if it was part of a span.
+        // PROPOSAL: If editing, temporarily treat as standalone?
+        // Actually, "Edit Item" is per line.
+        // If we edit a line that is NOT the group start, but part of a group, the 'Product' column is hidden.
+        // If we edit, we need to show the inputs.
+        // Simplest fix: If editing, render all columns for this row.
+        // However, the previous rows might still span over this one.
+        // This is tricky.
+        // Given the requirement, maybe we just pop a modal? Or just render inputs.
+        // Let's stick to inline edit, but acknowledge visual quirks or disable grouping for that row?
+        // Let's just try to render inputs. If it was hidden, it becomes visible? No, the `td` is hidden.
+        // If we are editing a child row (hidden Product col), and we show a Product dropdown... we can't because the cell doesn't exist.
+        // We'll keep the Product/School non-editable in this view or...
+        // Wait, the user can edit Product/School.
+        // If isEditing, maybe we render a special row.
+        return (
+             <tr>
+                <td colSpan="9" style={{ padding: '0' }}>
+                    <div style={{ padding: '20px', background: '#fff7ed', borderBottom: '2px solid #fdba74' }}>
+                        <div style={{ marginBottom: '15px' }}>
+                            <strong style={{ fontSize: '1.1rem', color: '#9a3412' }}>Editing: {line.product_name} ({line.size_label})</strong>
+                        </div>
+                         <div className="flex flex-wrap gap-6 items-end">
+                             <div className="flex flex-col gap-1">
+                                 <span className="text-sm font-semibold" style={{ color: '#666' }}>School</span>
+                                 <select 
+                                     className="input" 
+                                     value={editData.school_id || ""} 
+                                     onChange={e => {
+                                         const val = e.target.value;
+                                         setEditData({...editData, school_id: val === "" ? null : parseInt(val)});
+                                     }}
+                                     style={{ minWidth: '220px', height: '40px' }}
+                                 >
+                                     <option value="">Select School</option>
+                                     {masterData.schools.map(s => (
+                                         <option key={s.id} value={s.id}>{s.name}</option>
+                                     ))}
+                                 </select>
+                             </div>
+                             <div className="flex flex-col gap-1">
+                                 <span className="text-sm font-semibold" style={{ color: '#666' }}>Quantity</span>
+                                <input 
+                                    type="number" className="input" style={{ width: '100px', height: '40px' }}
+                                    value={editData.quantity} 
+                                    onChange={e => setEditData({...editData, quantity: parseInt(e.target.value) || 0})} 
+                                />
+                             </div>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-sm font-semibold" style={{ color: '#666' }}>Given Cloth ({line.unit})</span>
+                                <input 
+                                    type="number" step="0.01" className="input" style={{ width: '120px', height: '40px' }}
+                                    value={editData.given_cloth || ""} 
+                                    onChange={e => setEditData({...editData, given_cloth: e.target.value === "" ? null : parseFloat(e.target.value)})} 
+                                />
+                             </div>
+                             <div className="flex gap-3">
+                                 <button className="btn success" onClick={handleSave} style={{ height: '40px', padding: '0 1.5rem', fontWeight: 'bold' }}>Save Changes</button>
+                                 <button className="btn secondary" onClick={() => setIsEditing(false)} style={{ height: '40px', padding: '0 1.5rem' }}>Cancel</button>
+                             </div>
+                         </div>
+                         
+                         {line.deliveries && line.deliveries.length > 0 && (
+                            <div style={{ marginTop: '20px', borderTop: '1px solid #fdba74', paddingTop: '15px' }}>
+                                <strong style={{ fontSize: '1rem', color: '#9a3412', display: 'block', marginBottom: '10px' }}>Manage Deliveries</strong>
+                                <ul style={{ paddingLeft: '0', listStyle: 'none' }}>
+                                    {line.deliveries.map(d => (
+                                        <li key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', background: '#fff', padding: '8px 12px', borderRadius: '4px', border: '1px solid #ffd8a8' }}>
+                                            <span>{formatDate(d.date_delivered)}</span>
+                                            <span><strong>{d.quantity_delivered}</strong> delivered</span>
+                                            <button 
+                                                className="btn danger" 
+                                                style={{ padding: '4px 8px', fontSize: '0.8rem', marginLeft: 'auto' }}
+                                                onClick={() => handleDeleteDelivery(d.id)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                         )}
+                    </div>
+                </td>
+             </tr>
+        );
+    }
 
     return (
         <>
             <tr>
-                <td><strong>{line.product_name}</strong></td>
-                <td>{line.school_name || '-'}</td>
+                {/* Product Column - Merged */}
+                {(!isHidden || isGroupStart) && isGroupStart && (
+                     <td rowSpan={line.rowSpan} style={{ verticalAlign: 'top', background: '#fff' }}>
+                         <strong>{line.product_name}</strong>
+                     </td>
+                )}
+                
+                {/* School Column - Merged */}
+                {(!isHidden || isGroupStart) && isGroupStart && (
+                    <td rowSpan={line.rowSpan} style={{ verticalAlign: 'top', background: '#fff' }}>
+                        {line.school_name || '-'}
+                    </td>
+                )}
+
+                {/* Size - Always per line */}
                 <td>{line.size_label}</td>
+                
+                {/* Material / Unit - Always per line */}
                 <td>{line.material_req_per_unit} {line.unit}</td>
-                <td style={{ color: '#666' }}>{materialInHand} {line.unit}</td>
+
+                {/* In Hand - MERGED AGGREGATE */}
+                {(!isHidden || isGroupStart) && isGroupStart && (
+                    <td rowSpan={line.rowSpan} style={{ verticalAlign: 'top', background: '#fff', borderLeft: '1px solid #eee' }}>
+                         {(() => {
+                             const stats = line.groupStats;
+                             if (!stats) return '-';
+
+                             const { totalGiven, totalEst } = stats;
+                             
+                             // Always show stats for groups, assuming 0 given if not set
+                             const diff = totalGiven - totalEst;
+                             return (
+                                <div style={{ fontSize: '0.9rem' }}>
+                                    <div style={{ fontWeight: '600', color: '#333' }}>{totalGiven.toFixed(2)} {line.unit}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#888' }}>Est: {totalEst.toFixed(2)}</div>
+                                    <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: diff >= 0 ? '#2e7d32' : '#c62828' }}>
+                                         {diff >= 0 ? '+' : ''}{diff.toFixed(2)}
+                                    </div>
+                                </div>
+                             );
+                         })()}
+                    </td>
+                )}
+
+                {/* Ordered - Always per line */}
                 <td>{line.quantity}</td>
+                
+                {/* Delivered - Always per line */}
                 <td>{line.delivered_qty}</td>
-                <td style={{ color: isCompleted ? 'green' : 'orange', fontWeight: 'bold' }}>{line.pending_qty}</td>
-                <td>
-                    <div className="flex gap-2">
+                
+                {/* Pending - Always per line */}
+                <td style={{ color: isCompleted ? 'green' : 'orange', fontWeight: 'bold' }}>
+                        {line.pending_qty}
+                </td>
+
+                <td className="relative">
+                     {/* Edit Confirmation Modal */}
+                     {showEditConfirm && (
+                        <div className="modal-overlay" style={{ zIndex: 100 }}>
+                            <div className="modal-content" style={{ maxWidth: '400px' }}>
+                                <h3 className="modal-title">Unlock Item for Editing</h3>
+                                <p className="modal-message mb-4">
+                                    Please enter the admin password to edit <strong>{line.product_name}</strong>.
+                                </p>
+                                <div className="form-group">
+                                    <label style={{ fontSize: '0.9rem' }}>Admin Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="input" 
+                                        value={editPassword}
+                                        onChange={e => setEditPassword(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleVerifyEditPassword()}
+                                        placeholder="Enter password"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="modal-actions mt-4">
+                                    <button className="btn secondary" onClick={() => { setShowEditConfirm(false); setEditPassword(""); }}>Cancel</button>
+                                    <button className="btn success" onClick={handleVerifyEditPassword}>Unlock</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                     {/* Confirmation Modal */}
+                     {showConfirmDelete && (
+                        <div className="modal-overlay" style={{ zIndex: 100 }}>
+                            <div className="modal-content" style={{ maxWidth: '400px' }}>
+                                <h3 className="modal-title">Delete Item</h3>
+                                <p className="modal-message mb-4">
+                                    Are you sure you want to delete <strong>{line.product_name}</strong>?
+                                </p>
+                                <div className="form-group">
+                                    <label style={{ fontSize: '0.9rem' }}>Admin Password</label>
+                                    <input 
+                                        type="password" 
+                                        className="input" 
+                                        value={deletePassword}
+                                        onChange={e => setDeletePassword(e.target.value)}
+                                        placeholder="Enter password"
+                                        autoFocus
+                                    />
+                                </div>
+                                <div className="modal-actions mt-4">
+                                    <button className="btn secondary" onClick={() => { setShowConfirmDelete(false); setDeletePassword(""); }}>Cancel</button>
+                                    <button className="btn danger" onClick={handleDeleteConfirmed}>Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex gap-2 items-center">
                         {isCompleted ? (
-                            <span className="badge success">Done</span>
+                             <span className="badge success">Done</span>
                         ) : (
                             recording ? (
-                                <div className="flex gap-1 items-center">
-                                    <input 
-                                        type="date" 
-                                        className="input" 
-                                        style={{ padding: '0.2rem' }} 
-                                        value={deliveryDate} 
-                                        onChange={e => setDeliveryDate(e.target.value)}
-                                    />
-                                    <input 
-                                        type="number" 
-                                        className="input" 
-                                        style={{ width: '50px', padding: '0.2rem' }} 
-                                        value={deliveryQty} 
-                                        onChange={e => setDeliveryQty(e.target.value)}
-                                        placeholder="Qty"
-                                    />
-                                    <button className="btn success" style={{ padding: '0.2rem 0.5rem' }} onClick={handleDelivery}>✓</button>
-                                    <button className="btn danger" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setRecording(false)}>X</button>
+                                 <div className="flex gap-2 items-center" style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', background: 'white', padding: '12px', borderRadius: '8px', border: '1px solid #ddd', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 60, minWidth: '320px' }}>
+                                    <div className="flex flex-col gap-1">
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#666' }}>Date</span>
+                                        <input 
+                                            type="date" 
+                                            className="input" 
+                                            style={{ padding: '0.4rem', fontSize: '0.85rem' }} 
+                                            value={deliveryDate} 
+                                            onChange={e => setDeliveryDate(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleDelivery()}
+                                        />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 'bold', color: '#666' }}>Qty</span>
+                                        <input 
+                                            type="number" 
+                                            className="input" 
+                                            style={{ width: '70px', padding: '0.4rem', fontSize: '0.85rem' }} 
+                                            value={deliveryQty} 
+                                            onChange={e => setDeliveryQty(e.target.value)}
+                                            onKeyDown={e => e.key === 'Enter' && handleDelivery()}
+                                            placeholder="Qty"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="flex gap-2 ml-2">
+                                        <button className="btn success" style={{ padding: '0.5rem 0.8rem' }} onClick={handleDelivery} title="Save Delivery">Log</button>
+                                        <button className="btn secondary" style={{ padding: '0.5rem 0.8rem' }} onClick={() => setRecording(false)} title="Cancel">Cancel</button>
+                                    </div>
                                 </div>
                             ) : (
-                                <button className="btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }} onClick={() => setRecording(true)}>+ Del</button>
+                                <button 
+                                    className="btn success" 
+                                    style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }} 
+                                    onClick={() => setRecording(true)}
+                                    title="Record Delivery"
+                                >
+                                    <span>+</span> Del
+                                </button>
                             )
                         )}
-                        <button 
-                            className="btn" 
-                            style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem', background: '#eee', color: '#333' }}
-                            onClick={() => setShowHistory(!showHistory)}
-                        >
-                            {showHistory ? 'Hide Log' : 'Log'}
-                        </button>
+
+                        {/* Meatball Menu */}
+                        <div className="relative">
+                            <button 
+                                className="icon-btn" 
+                                onClick={(e) => {
+                                    e.stopPropagation(); // Prevent closing immediately
+                                    setShowMenu(!showMenu);
+                                }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                </svg>
+                            </button>
+                            
+                            {showMenu && (
+                                <div className="dropdown-menu">
+                                    <button 
+                                        className="dropdown-item" 
+                                        onClick={() => { setShowHistory(!showHistory); }}
+                                    >
+                                        {showHistory ? 'Hide Log' : 'View Log'}
+                                    </button>
+                                    <button 
+                                        className="dropdown-item" 
+                                        onClick={() => startEdit()}
+                                    >
+                                        Edit Item
+                                    </button>
+                                    {!isCompleted && (
+                                        <button 
+                                            className="dropdown-item danger" 
+                                            onClick={() => setShowConfirmDelete(true)}
+                                        >
+                                            Delete Item
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </td>
             </tr>

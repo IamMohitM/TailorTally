@@ -185,11 +185,15 @@ function ProductDetails({ product, onRefresh }) {
   const [editedProduct, setEditedProduct] = useState(null);
   const [isAddingSize, setIsAddingSize] = useState(false);
   const [newSizeLabel, setNewSizeLabel] = useState("");
+  const [deletedRules, setDeletedRules] = useState([]);
+  const [deletedSizes, setDeletedSizes] = useState([]);
 
   useEffect(() => {
     setEditedProduct(JSON.parse(JSON.stringify(product)));
     setIsEditing(false);
     setIsAddingSize(false);
+    setDeletedRules([]);
+    setDeletedSizes([]);
   }, [product]);
 
   const handleEditToggle = () => {
@@ -219,8 +223,23 @@ function ProductDetails({ product, onRefresh }) {
 
   const handleRemoveRule = (sizeIdx, ruleIdx) => {
     const newP = { ...editedProduct };
+    const ruleToRemove = newP.sizes[sizeIdx].material_rules[ruleIdx];
+    if (ruleToRemove && ruleToRemove.id) {
+      setDeletedRules(prev => [...prev, ruleToRemove.id]);
+    }
     newP.sizes[sizeIdx].material_rules.splice(ruleIdx, 1);
     setEditedProduct(newP);
+  };
+
+  const handleRemoveSize = (sizeIdx) => {
+    const newP = { ...editedProduct };
+    const sizeToRemove = newP.sizes[sizeIdx];
+    if (sizeToRemove && sizeToRemove.id) {
+      setDeletedSizes(prev => [...prev, sizeToRemove.id]);
+    }
+    newP.sizes.splice(sizeIdx, 1);
+    setEditedProduct(newP);
+    showToast(`Size ${sizeToRemove.label} removed. Remember to save changes!`, "info");
   };
 
   const handleAddSize = async () => {
@@ -274,16 +293,28 @@ function ProductDetails({ product, onRefresh }) {
         }
       }
       
-      // Cleanup: We don't have a DELETE rule API shown in previous code, 
-      // but if we did, we'd call it for removed rules.
-      // Since it's not shown, we'll assume the user only adds/edits.
+      // Cleanup: Delete removed rules
+      for (const ruleId of deletedRules) {
+        await fetchAPI(`/master-data/rules/${ruleId}`, {
+          method: 'DELETE'
+        });
+      }
+      setDeletedRules([]);
+      
+      // Cleanup: Delete removed sizes
+      for (const sizeId of deletedSizes) {
+        await fetchAPI(`/master-data/sizes/${sizeId}`, {
+          method: 'DELETE'
+        });
+      }
+      setDeletedSizes([]);
       
       setIsEditing(false);
       onRefresh();
-      showToast("Rules saved successfully", "success");
+      showToast("Changes saved successfully", "success");
     } catch (e) {
       console.error(e);
-      showToast(e.message || "Failed to save rules", "error");
+      showToast(e.message || "Failed to save changes", "error");
     }
   };
 
@@ -436,7 +467,15 @@ function ProductDetails({ product, onRefresh }) {
                     </div>
                   </td>
                   {isEditing && (
-                    <td></td>
+                    <td style={{ verticalAlign: 'top', paddingTop: '1rem' }}>
+                      <button 
+                        className="btn-ghost" 
+                        style={{ color: 'var(--danger-color)', padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+                        onClick={() => handleRemoveSize(sizeIdx)}
+                      >
+                        Remove Size
+                      </button>
+                    </td>
                   )}
                 </tr>
               ))}

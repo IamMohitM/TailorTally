@@ -8,25 +8,75 @@ logger = logging.getLogger(__name__)
 def process_master_data_file(file_obj, db: Session, filename: str):
     logger.info(f"Processing file: {filename}")
     
+    # Read the file initially with no header processing to inspect rows
     if filename.endswith('.csv'):
-        df = pd.read_csv(file_obj)
+        # using header=None to read everything as data first
+        df_raw = pd.read_csv(file_obj, header=None)
     elif filename.endswith(('.xls', '.xlsx')):
-        df = pd.read_excel(file_obj)
+        df_raw = pd.read_excel(file_obj, header=None)
     else:
         raise ValueError("Unsupported file format. Please use .csv or .xlsx")
-        
+
     # Expected columns validation
     expected_cols = [
         'Product Name', 'Category', 'Size Label', 'Size Order Index', 
         'Fabric Width (Inches)', 'Length Required', 'Unit'
     ]
+    expected_cols_lower = [c.lower() for c in expected_cols]
+
+    # Search for the header row in the first 10 rows
+    header_row_index = None
+    for i in range(min(10, len(df_raw))):
+        # Get values of the row as strings, stripped, lowercased
+        row_values = [str(x).strip().lower() for x in df_raw.iloc[i].values]
+        # Check if this row contains 'product name' and 'size label' (strong indicators)
+        # or most of the expected columns. Let's look for a subset match.
+        matches = sum(1 for col in expected_cols_lower if col in row_values)
+        
+        # If we match at least 4 of the expected columns, assume this is the header
+        if matches >= 4:
+            header_row_index = i
+            break
     
-    # Normalize headers just in case
-    df.columns = [c.strip() for c in df.columns]
+    if header_row_index is not None:
+        # Re-read or slice the dataframe
+        # Slicing is faster since we already have it
+        df = df_raw.iloc[header_row_index + 1:].copy()
+        df.columns = df_raw.iloc[header_row_index].values
+    else:
+        # Fallback to assuming first row was header (or re-read if we used header=None)
+        # Since we read with header=None, row 0 is the "header" if check failed,
+        # but the check failed so we proceed to standard validation which will fail and show the error.
+        df = df_raw.iloc[1:].copy()
+        df.columns = df_raw.iloc[0].values
+    
+    # Normalize headers
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # Try to map columns case-insensitively
+    actual_cols_map = {c.lower(): c for c in df.columns}
+    
+    for expected in expected_cols:
+        if expected not in df.columns and expected.lower() in actual_cols_map:
+            # Rename the actual column to the expected one
+            df.rename(columns={actual_cols_map[expected.lower()]: expected}, inplace=True)
     
     missing_cols = [col for col in expected_cols if col not in df.columns]
+    
     if missing_cols:
-        raise ValueError(f"Missing columns: {missing_cols}")
+        # Check if it looks like the header is on the second row (common issue)
+        # e.g. if explicit columns like "run 1" or "unnamed: 0" are present
+        found_cols_str = ", ".join([str(c) for c in df.columns[:5]])  # Show first 5 to avoid clutter
+        if len(df.columns) > 5:
+            found_cols_str += "..."
+            
+        error_msg = f"Missing columns: {missing_cols}. Found columns: [{found_cols_str}]"
+        
+        # Hint for the user
+        if any("unnamed" in str(c).lower() for c in df.columns):
+            error_msg += ". It looks like the file might not have headers in the first row."
+            
+        raise ValueError(error_msg)
 
     # Counters
     stats = {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchAPI } from '../api';
 import Combobox from '../components/Combobox';
@@ -13,9 +13,11 @@ export default function CreateOrder() {
   const [tailorEmail, setTailorEmail] = useState(""); // State for email
   const [selectedSchool, setSelectedSchool] = useState("");
   const [orderDate, setOrderDate] = useState(new Date().toISOString().split('T')[0]);
+  const [slipNo, setSlipNo] = useState("");
   const [notes, setNotes] = useState("");
 
   const [productEntries, setProductEntries] = useState([]);
+
 
   useEffect(() => {
     loadData();
@@ -42,16 +44,31 @@ export default function CreateOrder() {
       setSchools(sData);
       setProducts(pData);
       setProductEntries([{ tempId: Date.now(), productId: "", selections: {} }]);
-    } catch (e) {
+    } catch(e) {
       console.error(e);
     }
   }
 
+  const prevProductEntriesLength = useRef(0);
+
+  useEffect(() => {
+    if (productEntries.length > prevProductEntriesLength.current) {
+        // New entry added, focus it
+        const index = productEntries.length - 1;
+        // Small timeout to allow render
+        setTimeout(() => {
+            const el = document.getElementById(`product-select-${index}`);
+            if (el) el.focus();
+        }, 50);
+    }
+    prevProductEntriesLength.current = productEntries.length;
+  }, [productEntries]);
+
   const handleCreateTailor = async (name) => {
-      const email = window.prompt(`Enter email for ${name} (optional):`);
+      // Removed prompt for email. Created with name only.
       try {
           const body = { name };
-          if (email) body.email = email;
+          // email is optional and can be filled in the input later
 
           const newTailor = await fetchAPI('/master-data/tailors', {
               method: 'POST',
@@ -59,7 +76,6 @@ export default function CreateOrder() {
           });
           setTailors([...tailors, newTailor]);
           setSelectedTailor(newTailor.id);
-          // Email sync effect will handle setting email state, but we can optimise
       } catch (e) {
           alert("Failed to create tailor: " + e.message);
       }
@@ -81,7 +97,7 @@ export default function CreateOrder() {
   function addProductEntry() {
       setProductEntries([
           ...productEntries, 
-          { tempId: Date.now(), productId: "", schoolId: "", selections: {} } // Added schoolId
+          { tempId: Date.now(), productId: "", schoolId: "", groupWidth: "", selections: {} } // Added groupWidth
       ]);
   }
 
@@ -94,20 +110,29 @@ export default function CreateOrder() {
           if (entry.tempId !== tempId) return entry;
           
           if (field === 'productId') {
-              return { ...entry, productId: value, selections: {} };
+              return { ...entry, productId: value, groupWidth: "", selections: {} }; // Reset groupWidth
           }
           
-          if (field === 'schoolId') { // Handle school update
+          if (field === 'schoolId') {
               return { ...entry, schoolId: value };
+          }
+          
+          if (field === 'groupWidth') {
+              return { ...entry, groupWidth: value };
           }
 
           if (field === 'selections') {
               return { ...entry, selections: value };
           }
 
+          if (field === 'given_cloth') {
+              return { ...entry, given_cloth: value };
+          }
+
           return entry;
       }));
   }
+
 
   const handleSubmit = async () => {
       if (!selectedTailor) return alert("Select a tailor");
@@ -134,6 +159,9 @@ export default function CreateOrder() {
       productEntries.forEach(entry => {
           if (!entry.productId) return;
           
+          let firstLineOfGroup = true;
+          const groupId = entry.tempId.toString();
+
           Object.entries(entry.selections).forEach(([sizeId, data]) => {
               if (data.quantity > 0) {
                   orderLines.push({
@@ -142,8 +170,11 @@ export default function CreateOrder() {
                       school_id: entry.schoolId || null, // Pass schoolId
                       rule_id: data.ruleId,
                       fabric_width_inches: data.fabricWidth,
-                      quantity: parseInt(data.quantity)
+                      quantity: parseInt(data.quantity),
+                      group_id: groupId,
+                      given_cloth: firstLineOfGroup ? (entry.given_cloth ? parseFloat(entry.given_cloth) : null) : null
                   });
+                  firstLineOfGroup = false;
               }
           });
       });
@@ -154,7 +185,9 @@ export default function CreateOrder() {
           tailor_id: selectedTailor,
           // school_id: selectedSchool || null, // REMOVED
           created_at: new Date(orderDate).toISOString(),
+          slip_no: slipNo,
           notes,
+          given_cloth: productEntries.reduce((acc, entry) => acc + (parseFloat(entry.given_cloth || 0)), 0),
           order_lines: orderLines,
           send_email: true
       };
@@ -170,6 +203,13 @@ export default function CreateOrder() {
       }
   };
 
+  const focusField = (id) => {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) el.focus();
+      }, 0);
+  }
+
   return (
     <div>
       <h1>Create New Order</h1>
@@ -179,32 +219,68 @@ export default function CreateOrder() {
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Tailor</label>
                 <Combobox 
+                    id="tailor-select"
                     options={tailors}
                     value={selectedTailor}
                     onChange={setSelectedTailor}
                     onCreate={handleCreateTailor}
                     placeholder="Search/create tailor..."
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') focusField('tailor-email');
+                    }}
                 />
               </div>
               
               <div className="form-group" style={{ marginBottom: 0 }}>
                  <label>Tailor Email</label>
                  <input 
+                    id="tailor-email"
                     type="email" 
                     className="input" 
                     value={tailorEmail} 
                     onChange={e => setTailorEmail(e.target.value)}
                     placeholder="Enter email..."
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusField('order-date');
+                        }
+                    }}
                  />
               </div>
 
               <div className="form-group" style={{ marginBottom: 0 }}>
                 <label>Date</label>
                 <input 
+                    id="order-date"
                     type="date" 
                     className="input" 
                     value={orderDate} 
                     onChange={e => setOrderDate(e.target.value)} 
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusField('order-notes');
+                        }
+                    }}
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label>Slip No.</label>
+                <input 
+                    id="slip-no"
+                    type="text" 
+                    className="input" 
+                    value={slipNo} 
+                    onChange={e => setSlipNo(e.target.value)} 
+                    placeholder="Physical slip #"
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            focusField('order-notes');
+                        }
+                    }}
                 />
               </div>
           </div>
@@ -212,11 +288,20 @@ export default function CreateOrder() {
           <div className="form-group" style={{ marginTop: '1rem', marginBottom: 0 }}>
               <label>Notes</label>
               <textarea 
+                id="order-notes"
                 className="input" 
                 value={notes} 
                 onChange={e => setNotes(e.target.value)} 
                 rows="1"
                 style={{ resize: 'vertical', minHeight: '38px' }}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (productEntries.length > 0) {
+                            focusField(`product-select-0`);
+                        }
+                    }
+                }}
               />
           </div>
       </div>
@@ -233,6 +318,7 @@ export default function CreateOrder() {
                 onCreateSchool={handleCreateSchool} // Pass handler
                 onUpdate={(field, val) => updateProductEntry(entry.tempId, field, val)}
                 onRemove={() => removeProductEntry(entry.tempId)}
+                onAddProductEntry={addProductEntry}
             />
         ))}
         <button className="btn" onClick={addProductEntry}>+ Add Product Group</button>
@@ -246,13 +332,11 @@ export default function CreateOrder() {
   );
 }
 
-function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onUpdate, onRemove }) {
+function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onUpdate, onRemove, onAddProductEntry }) {
     const selectedProduct = products.find(p => p.id == entry.productId);
     const sizes = useMemo(() => {
         return selectedProduct ? [...selectedProduct.sizes].sort((a,b) => a.order_index - b.order_index) : [];
     }, [selectedProduct]);
-
-    // ... (handleSizeUpdate stays same) ...
 
     const handleSizeUpdate = (sizeId, field, value) => {
         let currentData = entry.selections[sizeId] || { quantity: "", ruleId: "", fabricWidth: null, materialPerUnit: 0, unit: "", totalMaterial: 0 };
@@ -261,14 +345,30 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
 
         if (field === 'quantity') {
             newData.quantity = value;
-            // Auto-select rule if needed
+            // Auto-select rule if needed: if not set, and (no groupWidth selected or we can infer default?)
+            // If groupWidth IS selected, we should rely on that rule? 
+            // Actually, if groupWidth is selected, ruleId SHOULD be set already.
+            // If it's NOT set, it means data is desync.
+            
             const size = sizes.find(s => s.id == sizeId);
             if (size && size.material_rules.length > 0 && !newData.ruleId) {
-                const r = size.material_rules[0];
-                newData.ruleId = r.id;
-                newData.fabricWidth = r.fabric_width_inches;
-                newData.materialPerUnit = r.length_required;
-                newData.unit = r.unit;
+                // If we have a groupWidth, try to match it
+                let r = null;
+                if (entry.groupWidth) {
+                     r = size.material_rules.find(r => r.fabric_width_inches == entry.groupWidth);
+                }
+                
+                // Fallback to first rule if no groupWidth or no match
+                if (!r) {
+                    r = size.material_rules[0];
+                }
+
+                if (r) {
+                    newData.ruleId = r.id;
+                    newData.fabricWidth = r.fabric_width_inches;
+                    newData.materialPerUnit = r.length_required;
+                    newData.unit = r.unit;
+                }
             }
         } 
         else if (field === 'ruleId') {
@@ -282,6 +382,15 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
              }
         }
         
+        // ROBUSTNESS FIX: Ensure materialPerUnit is correct if ruleId is present
+        if (newData.ruleId) {
+             const size = sizes.find(s => s.id == sizeId);
+             const rule = size?.material_rules.find(r => r.id == newData.ruleId);
+             if (rule) {
+                 newData.materialPerUnit = rule.length_required;
+             }
+        }
+
         // Re-calc total
         if (field === 'quantity' || field === 'ruleId') {
              newData.totalMaterial = (newData.quantity || 0) * (newData.materialPerUnit || 0);
@@ -291,16 +400,97 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
         onUpdate('selections', newSelections);
     };
 
+    // Calculate unique available fabric widths
+    const availableWidths = useMemo(() => {
+        if (!selectedProduct) return [];
+        const widths = new Set();
+        selectedProduct.sizes.forEach(s => {
+            s.material_rules.forEach(r => {
+                if (r.fabric_width_inches) widths.add(r.fabric_width_inches);
+            });
+        });
+        return Array.from(widths).sort((a, b) => a - b);
+    }, [selectedProduct]);
+
+    const handleGroupWidthChange = (width) => {
+        // Update groupWidth in parent
+        onUpdate('groupWidth', width);
+
+        let newSelections = { ...entry.selections };
+        
+        sizes.forEach(size => {
+            // Find rule for this size with matching width
+            const rule = size.material_rules.find(r => r.fabric_width_inches == width);
+            
+            if (rule) {
+                // Update selection for this size
+                const currentData = newSelections[size.id] || { quantity: "", ruleId: "", fabricWidth: null, materialPerUnit: 0, unit: "", totalMaterial: 0 };
+                newSelections[size.id] = {
+                    ...currentData,
+                    ruleId: rule.id,
+                    fabricWidth: rule.fabric_width_inches,
+                    materialPerUnit: rule.length_required,
+                    unit: rule.unit,
+                    totalMaterial: (currentData.quantity || 0) * rule.length_required
+                };
+            }
+        });
+
+        onUpdate('selections', newSelections);
+    };
+
+    // Effect to initialize groupWidth if needed (e.g. first time)
+    // NOTE: We only want to do this if groupWidth is empty AND we have options.
+    // BUT we must interpret "empty" carefully. 
+    // If productId just changed, groupWidth was reset to "".
+    // Effect to initialize groupWidth if needed (e.g. first time)
+    useEffect(() => {
+        if (availableWidths.length > 0) {
+            // Check if current groupWidth is valid for availableWidths
+            const currentIsValid = entry.groupWidth && availableWidths.includes(Number(entry.groupWidth));
+            
+            if (!currentIsValid) {
+                // Try to find default
+                let defaultWidth = availableWidths.find(w => w == 36);
+                if (!defaultWidth) {
+                    defaultWidth = availableWidths[0];
+                }
+                
+                if (defaultWidth) {
+                     handleGroupWidthChange(defaultWidth);
+                }
+            }
+        }
+    }, [availableWidths, entry.groupWidth]); // Removed handleGroupWidthChange from deps as it's stable enough or we ignore it to prevent loops
+
+    // Calculate total meters for this entry
+    const totalMeters = Object.values(entry.selections).reduce((acc, curr) => acc + (curr.totalMaterial || 0), 0);
+
+    const focusField = (id) => {
+        setTimeout(() => {
+            const el = document.getElementById(id);
+            if (el) el.focus();
+        }, 0);
+    };
+
+// ... (ProductEntryItem props) ...
     return (
-        <div className="card" style={{ background: '#fafafa', marginBottom: '0.75rem', padding: '0.75rem' }}>
-            <div className="flex justify-between items-center" style={{ marginBottom: '0.75rem' }}>
-                <div className="flex gap-4 flex-1">
+        <div className="card" style={{ background: '#fafafa', marginBottom: '0.5rem', padding: '0.5rem' }}>
+            <div className="flex justify-between items-center" style={{ marginBottom: '0.5rem' }}>
+                <div className="flex gap-2 flex-1">
                     <div className="form-group flex-1" style={{ marginBottom: 0 }}>
                         <select 
+                            id={`product-select-${index}`}
                             className="input" 
-                            style={{ fontWeight: 'bold', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '1.1rem' }}
+                            style={{ fontWeight: 'bold', border: 'none', background: 'transparent', paddingLeft: 0, fontSize: '1rem' }}
                             value={entry.productId} 
                             onChange={e => onUpdate('productId', e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    focusField(`school-select-${index}`);
+                                }
+                            }}
                         >
                             <option value="">Select Product...</option>
                             {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -308,29 +498,64 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                     </div>
                     <div className="form-group flex-1" style={{ marginBottom: 0, position: 'relative' }}>
                          <Combobox 
+                            id={`school-select-${index}`}
                             options={schools}
                             value={entry.schoolId}
                             onChange={(val) => onUpdate('schoolId', val)}
                             onCreate={onCreateSchool}
                             placeholder="Select School (Optional)..."
-                            inputStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '6px' }}
+                            inputStyle={{ background: '#fff', border: '1px solid #ddd', borderRadius: '4px', padding: '0.3rem', fontSize: '0.9rem' }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    // Check if width select exists
+                                    const widthSelect = document.getElementById(`width-select-${index}`);
+                                    if (widthSelect) {
+                                        widthSelect.focus();
+                                    } else {
+                                        focusField(`qty-${entry.tempId}-0`);
+                                    }
+                                }
+                            }}
                         />
                     </div>
                 </div>
-                <button className="btn danger" style={{ padding: '0.2rem 0.5rem', marginLeft: '1rem' }} onClick={onRemove}>X</button>
+
+                {availableWidths.length > 0 && (
+                    <div className="form-group" style={{ marginBottom: 0, marginLeft: '0.5rem', width: '100px' }}>
+                         <select 
+                            id={`width-select-${index}`}
+                            className="input"
+                            style={{ padding: '0.3rem', fontSize: '0.9rem' }}
+                            value={entry.groupWidth || ""} // Controlled by entry
+                            onChange={(e) => handleGroupWidthChange(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    focusField(`qty-${entry.tempId}-0`);
+                                }
+                            }}
+                         >
+                             <option value="" disabled>Width</option>
+                             {availableWidths.map(w => (
+                                 <option key={w} value={w}>{w}"</option>
+                             ))}
+                         </select>
+                    </div>
+                )}
+                
+                <button className="btn danger" style={{ padding: '0.1rem 0.4rem', marginLeft: '0.5rem', fontSize: '0.8rem' }} onClick={onRemove}>X</button>
             </div>
 
             {selectedProduct && (
-                <div style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '80px 100px 100px 1fr 100px', gap: '0.75rem', marginBottom: '0.25rem', fontWeight: 'bold', fontSize: '0.8rem', color: '#888', textTransform: 'uppercase' }}>
+                <div style={{ borderTop: '1px solid #eee', paddingTop: '0.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 100px', gap: '0.5rem', marginBottom: '0.2rem', fontWeight: 'bold', fontSize: '0.75rem', color: '#888', textTransform: 'uppercase' }}>
                         <div>Size</div>
-                        <div>Material/Unt</div>
-                        <div>Quantity</div>
-                        <div>Rule</div>
+                        <div>Qty</div>
+                        <div>Mat/Unit</div>
                         <div style={{ textAlign: 'right' }}>Total</div>
                     </div>
                     
-                    {sizes.map(size => {
+                    {sizes.map((size, idx) => {
                         const data = entry.selections[size.id] || { quantity: "", ruleId: "", totalMaterial: 0 };
                         const rules = size.material_rules || [];
                         
@@ -341,16 +566,73 @@ function ProductEntryItem({ entry, index, products, schools, onCreateSchool, onU
                                 data={data}
                                 rules={rules}
                                 onChange={(field, val) => handleSizeUpdate(size.id, field, val)}
+                                entryId={entry.tempId}
+                                rowIndex={idx}
+                                totalRows={sizes.length}
+                                givenClothId={`given-cloth-${index}`}
                             />
                         );
                     })}
+
+                    <div style={{ 
+                        marginTop: '0.25rem', 
+                        paddingTop: '0.25rem', 
+                        borderTop: '1px solid #ddd', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        fontWeight: 'bold',
+                        color: '#666',
+                        fontSize: '0.9rem'
+                    }}>
+                        <div className="flex gap-2 items-center">
+                            <label style={{ fontSize: '0.8rem' }}>Given:</label>
+                             <input 
+                                id={`given-cloth-${index}`}
+                                type="number"
+                                step="0.01"
+                                className="input" 
+                                style={{ width: '70px', padding: '0.2rem' }}
+                                value={entry.given_cloth || ""} 
+                                onChange={e => onUpdate('given_cloth', e.target.value)} 
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        onAddProductEntry();
+                                    }
+                                }}
+                                placeholder="0"
+                            />
+                        </div>
+                        <div>Total: {totalMeters.toFixed(2)}m</div>
+                    </div>
                 </div>
             )}
         </div>
     )
 }
 
-function SizeRow({ size, data, rules, onChange }) {
+function SizeRow({ size, data, rules, onChange, entryId, rowIndex, totalRows, givenClothId }) {
+    const qtyInputId = `qty-${entryId}-${rowIndex}`;
+
+    const handleQtyKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            focusNextRowQty();
+        }
+    };
+
+    const focusNextRowQty = () => {
+        const nextQtyId = `qty-${entryId}-${rowIndex + 1}`;
+        const nextInput = document.getElementById(nextQtyId);
+        if (nextInput) {
+            nextInput.focus();
+        } else if (givenClothId) {
+            const givenCloth = document.getElementById(givenClothId);
+            if (givenCloth) givenCloth.focus();
+        }
+    };
+
     const getMaterialPerUnitDisplay = () => {
         if (data.materialPerUnit) {
             return `${data.materialPerUnit} ${data.unit}`;
@@ -365,45 +647,31 @@ function SizeRow({ size, data, rules, onChange }) {
     return (
         <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: '80px 100px 100px 1fr 100px', 
-            gap: '0.75rem', 
+            gridTemplateColumns: '80px 80px 1fr 100px', 
+            gap: '0.5rem', 
             alignItems: 'center', 
             padding: '2px 0',
             borderBottom: '1px solid #f0f0f0' 
         }}>
-            <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{size.label}</div>
-            <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                {getMaterialPerUnitDisplay()}
-            </div>
+            <div style={{ fontWeight: '600', fontSize: '0.9rem' }}>{size.label}</div>
             <div>
                  <input 
+                    id={qtyInputId}
                     type="number" 
                     className="input" 
-                    placeholder="0"
+                    placeholder="-"
                     min="0"
                     value={data.quantity} 
                     onChange={e => onChange('quantity', e.target.value)}
-                    style={{ padding: '0.2rem 0.4rem', fontSize: '0.9rem' }}
+                    onKeyDown={handleQtyKeyDown}
+                    style={{ padding: '0.1rem 0.3rem', fontSize: '0.9rem', width: '100%' }}
                  />
             </div>
-            <div>
-                {rules.length > 0 ? (
-                    <select 
-                        className="input" 
-                        value={data.ruleId || ""} 
-                        onChange={e => onChange('ruleId', e.target.value)}
-                        style={{ padding: '0.2rem 0.4rem', fontSize: '0.85rem' }}
-                    >
-                         {rules.map(r => (
-                            <option key={r.id} value={r.id}>
-                                {r.fabric_width_inches ? `${r.fabric_width_inches}"` : 'Std'}
-                            </option>
-                         ))}
-                    </select>
-                ) : <span style={{fontSize: '0.75rem', color: '#999'}}>No rules</span>}
+            <div style={{ fontSize: '0.8rem', color: '#666' }}>
+                {getMaterialPerUnitDisplay()}
             </div>
             <div style={{ fontSize: '0.9rem', textAlign: 'right', fontWeight: data.totalMaterial > 0 ? '600' : 'normal' }}>
-                {data.totalMaterial > 0 ? `${data.totalMaterial.toFixed(2)} ${data.unit}` : '-'}
+                {data.totalMaterial > 0 ? `${data.totalMaterial.toFixed(2)}` : '-'}
             </div>
         </div>
     )

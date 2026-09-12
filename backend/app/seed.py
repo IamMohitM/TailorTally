@@ -2,9 +2,17 @@ from sqlalchemy.orm import Session
 from .database import SessionLocal, engine, Base
 from . import models
 
-def db_seed():
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+def db_seed(db: Session = None, db_engine = None):
+    target_engine = db_engine if db_engine else engine
+    Base.metadata.create_all(bind=target_engine)
+    
+    if db is None:
+        db = SessionLocal()
+    
+    # Check if DB is already seeded (check Tailors)
+    # If using a fresh test DB, it will be empty.
+    # If using main DB, might be seeded.
+    # Since we passing db session, just work with it.
 
     # 1. Tailors
     if not db.query(models.Tailor).first():
@@ -115,6 +123,14 @@ def db_seed():
                  db.add(models.School(name=school_name))
         db.commit()
 
+    # 4. Settings (Admin Password)
+    from .utils.security import get_password_hash
+    if not db.query(models.Settings).filter(models.Settings.key == "admin_password").first():
+        hashed_pwd = get_password_hash("admin")
+        db.add(models.Settings(key="admin_password", value=hashed_pwd))
+        db.commit()
+
+    db.commit()
     db.close()
     print("Seed data initialized.")
 

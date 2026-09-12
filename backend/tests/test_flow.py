@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
-from backend.app.main import app
-from backend.app.database import Base, engine, SessionLocal
-from backend.app import models
+from app.main import app
+from app.database import Base, engine, SessionLocal
+from app import models
 import pytest
 
 # Setup Test DB
@@ -9,9 +9,9 @@ import pytest
 # Since we have seed data in the main DB, let's use the main DB to test against the seed data! 
 # (Not ideal for unit tests but good for "end-to-end" on local).
 
-client = TestClient(app)
+# client = TestClient(app) - Removed
 
-def test_order_flow():
+def test_order_flow(client):
     # 1. Get Tailors
     response = client.get("/master-data/tailors")
     assert response.status_code == 200

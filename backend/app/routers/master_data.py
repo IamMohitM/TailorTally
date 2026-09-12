@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from io import BytesIO
 from sqlalchemy.orm import Session
 from typing import List
 from .. import models, schemas
@@ -87,6 +88,21 @@ def update_size(size_id: int, size: schemas.SizeCreate, db: Session = Depends(ge
     db.refresh(db_size)
     return db_size
 
+@router.delete("/sizes/{size_id}")
+def delete_size(size_id: int, db: Session = Depends(get_db)):
+    db_size = db.query(models.Size).filter(models.Size.id == size_id).first()
+    if not db_size:
+        raise HTTPException(status_code=404, detail="Size not found")
+    
+    try:
+        db.delete(db_size)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"message": "Size deleted successfully"}
+
 
 # --- Material Rules ---
 
@@ -120,6 +136,21 @@ def read_material_rules(size_id: int, db: Session = Depends(get_db)):
     rules = db.query(models.MaterialRule).filter(models.MaterialRule.size_id == size_id).all()
     return rules
 
+@router.delete("/rules/{rule_id}")
+def delete_material_rule(rule_id: int, db: Session = Depends(get_db)):
+    db_rule = db.query(models.MaterialRule).filter(models.MaterialRule.id == rule_id).first()
+    if not db_rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    
+    try:
+        db.delete(db_rule)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    return {"message": "Rule deleted successfully"}
+
 # --- Tailors ---
 
 @router.get("/tailors", response_model=List[schemas.Tailor])
@@ -149,8 +180,10 @@ def update_tailor(tailor_id: int, tailor: schemas.TailorCreate, db: Session = De
 @router.post("/upload")
 async def upload_master_data(file: UploadFile = File(...), db: Session = Depends(get_db)):
     try:
+        contents = await file.read()
+        file_obj = BytesIO(contents)
         # Pass the file-like object directly to the utility
-        stats = process_master_data_file(file.file, db, file.filename)
+        stats = process_master_data_file(file_obj, db, file.filename)
         return {"message": "Import successful", "stats": stats}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

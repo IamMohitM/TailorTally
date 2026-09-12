@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import engine, Base
-from .routers import master_data, orders, schools, dashboard, admin
+from .routers import master_data, orders, schools, dashboard, admin, reports
 # from . import seed # Will implement seed trigger later or via script
 
 # Create tables
@@ -15,6 +15,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["Content-Disposition"],
 )
 
 @app.get("/")
@@ -27,3 +28,5 @@ app.include_router(orders.router)
 app.include_router(schools.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
+app.include_router(reports.router)
+
